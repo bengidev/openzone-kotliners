@@ -2,6 +2,7 @@
 
 > Native mobile AI assistant for Android — bring AI models to your pocket to help get work done.
 
+[![Android CI](https://github.com/bengidev/openzone-kotliners/actions/workflows/android-ci.yml/badge.svg)](https://github.com/bengidev/openzone-kotliners/actions/workflows/android-ci.yml)
 [![Platform](https://img.shields.io/badge/platform-Android%2011%2B-blue.svg)](https://developer.android.com/)
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.2.10-purple.svg)](https://kotlinlang.org)
 [![Jetpack Compose](https://img.shields.io/badge/UI-Jetpack%20Compose-green.svg)](https://developer.android.com/compose)
@@ -57,6 +58,12 @@ app/
 app/src/test/                                                  # Unit tests
 app/src/androidTest/                                           # Instrumented tests
 ```
+
+## ✅ CI/CD
+
+- **Android CI** runs on pushes and pull requests to `main`.
+- **Android Release** runs on version tags like `v1.0.0` and manual dispatch.
+- Debug and release APKs are uploaded as GitHub Actions artifacts.
 
 ## 🤝 Contributing
 

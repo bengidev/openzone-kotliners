@@ -1,4 +1,4 @@
-package io.github.bengidev.OpenZone.ui.theme
+package io.github.bengidev.openzone.ui.theme
 
 import android.app.Activity
 import android.os.Build

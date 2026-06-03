@@ -1,4 +1,4 @@
-package io.github.bengidev.OpenZone.ui.theme
+package io.github.bengidev.openzone.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

@@ -1,47 +1,38 @@
-package io.github.bengidev.OpenZone
+package io.github.bengidev.openzone
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import io.github.bengidev.OpenZone.ui.theme.OpenZoneTheme
+import com.arkivanov.decompose.DefaultComponentContext
+import com.arkivanov.essenty.lifecycle.LifecycleRegistry
+import com.example.onboarding.OnboardingScreen
+import com.example.onboarding.application.OnboardingComponent
+import com.example.onboarding.infrastructure.DataStoreOnboardingRepository
+import io.github.bengidev.openzone.ui.theme.OpenZoneTheme
 
 class MainActivity : ComponentActivity() {
+    private val lifecycleRegistry = LifecycleRegistry()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        val onboardingComponent = OnboardingComponent(
+            componentContext = DefaultComponentContext(lifecycle = lifecycleRegistry),
+            repository = DataStoreOnboardingRepository(this),
+            onComplete = {
+                finish()
+            }
+        )
+
         setContent {
             OpenZoneTheme {
-                Scaffold( modifier = Modifier.fillMaxSize() ) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
+                OnboardingScreen(
+                    component = onboardingComponent,
+                    onThemeToggle = null
+                )
             }
         }
-    }
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    OpenZoneTheme {
-        Greeting("Android")
     }
 }

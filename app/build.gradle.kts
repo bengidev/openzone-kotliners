@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "io.github.bengidev.OpenZone"
+    namespace = "io.github.bengidev.openzone"
     compileSdk {
         version = release(36) {
             minorApiLevel = 1
@@ -18,7 +18,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "io.github.bengidev.OpenZone"
+        applicationId = "io.github.bengidev.openzone"
         minSdk = 30
         targetSdk = 36
         versionCode = 1
@@ -43,17 +43,33 @@ android {
 }
 
 dependencies {
+    // Onboarding module
+    implementation(project(":onboarding"))
+
+    // Decompose
+    implementation("com.arkivanov.decompose:decompose:3.5.0")
     implementation("com.arkivanov.decompose:extensions-compose:3.5.0")
+    implementation("com.arkivanov.essenty:lifecycle:2.5.0")
+
+    // Activity Compose
     implementation("androidx.activity:activity-compose:1.8.2")
+
+    // Compose
     implementation(platform("androidx.compose:compose-bom:2026.02.01"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.material3:material3")
+
+    // Material
     implementation("com.google.android.material:material:1.12.0")
+
+    // AndroidX
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+
+    // Testing
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)

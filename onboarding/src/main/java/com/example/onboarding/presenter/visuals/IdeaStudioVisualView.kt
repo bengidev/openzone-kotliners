@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -51,7 +52,6 @@ fun IdeaStudioVisualView(
     appeared: Boolean = true
 ) {
     val palette = OnboardingTheme.palette
-    val spacing = OnboardingTheme.spacing
     val radius = OnboardingTheme.radius
 
     val selectedPrompt = OnboardingPromptOption.samples.getOrElse(selectedPromptIndex) {
@@ -89,9 +89,12 @@ fun IdeaStudioVisualView(
     }
 
     val visibleText = fullText.substring(0, typedLength)
+    val cursorOpacity = if (!isTypingComplete) cursorAlpha else 0.34f
 
     Column(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .fillMaxHeight(),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         Row(
@@ -110,6 +113,7 @@ fun IdeaStudioVisualView(
 
         Column(
             modifier = Modifier
+                .weight(1f)
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(radius.sm))
                 .background(
@@ -139,21 +143,19 @@ fun IdeaStudioVisualView(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
                 )
-                if (!isTypingComplete) {
-                    Box(
-                        modifier = Modifier
-                            .padding(start = 2.dp)
-                            .width(6.dp)
-                            .height(15.dp)
-                            .background(palette.textPrimary.copy(alpha = cursorAlpha))
-                    )
-                }
+                Box(
+                    modifier = Modifier
+                        .padding(start = 2.dp)
+                        .width(6.dp)
+                        .height(15.dp)
+                        .background(palette.textPrimary.copy(alpha = cursorOpacity))
+                )
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                SkeletonLine(width = 0.84f, delayMillis = 0, active = appeared && isTypingComplete, reduceMotion = reduceMotion)
-                SkeletonLine(width = 0.62f, delayMillis = 70, active = appeared && isTypingComplete, reduceMotion = reduceMotion)
-                SkeletonLine(width = 0.74f, delayMillis = 140, active = appeared && isTypingComplete, reduceMotion = reduceMotion)
+                SkeletonLine(width = 0.84f, delayMillis = 0, active = appeared, reduceMotion = reduceMotion)
+                SkeletonLine(width = 0.62f, delayMillis = 70, active = appeared, reduceMotion = reduceMotion)
+                SkeletonLine(width = 0.74f, delayMillis = 140, active = appeared, reduceMotion = reduceMotion)
             }
         }
     }
@@ -167,7 +169,6 @@ private fun SkeletonLine(
     reduceMotion: Boolean
 ) {
     val palette = OnboardingTheme.palette
-    val radius = OnboardingTheme.radius
     val alpha = remember { Animatable(0f) }
     val offsetX = remember { Animatable(-12f) }
 

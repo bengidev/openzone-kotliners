@@ -1,6 +1,7 @@
 package com.example.onboarding.presenter
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import com.example.onboarding.application.OnboardingState
 import com.example.onboarding.domain.OnboardingPage
@@ -8,6 +9,7 @@ import com.example.onboarding.domain.OnboardingPageType
 import com.example.onboarding.presenter.visuals.EncryptedPairingVisualView
 import com.example.onboarding.presenter.visuals.IdeaStudioVisualView
 import com.example.onboarding.presenter.visuals.PromptQueueVisualView
+import com.example.onboarding.presenter.visuals.DefaultReasoningLevel
 import com.example.onboarding.presenter.visuals.ReasoningControlVisualView
 import com.example.onboarding.presenter.visuals.WorkspaceReadyVisualView
 
@@ -52,6 +54,9 @@ fun PageVisualFactory(
         }
 
         OnboardingPageType.ReasoningControl -> {
+            LaunchedEffect(page.id) {
+                onReasoningLevelChanged(DefaultReasoningLevel.toDouble())
+            }
             ReasoningControlVisualView(
                 reasoningLevel = state.demoState.reasoningLevel.toFloat(),
                 onReasoningLevelChanged = { onReasoningLevelChanged(it.toDouble()) },

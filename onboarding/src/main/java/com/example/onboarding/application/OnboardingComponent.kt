@@ -4,8 +4,9 @@ import com.arkivanov.decompose.ComponentContext
 import com.arkivanov.decompose.value.MutableValue
 import com.arkivanov.decompose.value.Value
 import com.arkivanov.decompose.value.update
-import com.example.onboarding.domain.OnboardingPage
+import com.example.onboarding.domain.OnboardingPageType
 import com.example.onboarding.infrastructure.OnboardingRepository
+import com.example.onboarding.presenter.visuals.DefaultReasoningLevel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -44,21 +45,21 @@ class OnboardingComponent(
     fun onNextTapped() {
         _state.update { current ->
             val nextPage = (current.currentPage + 1).coerceAtMost(current.totalPages - 1)
-            current.copy(currentPage = nextPage)
+            current.withPageChange(nextPage)
         }
     }
 
     fun onPreviousTapped() {
         _state.update { current ->
             val prevPage = (current.currentPage - 1).coerceAtLeast(0)
-            current.copy(currentPage = prevPage)
+            current.withPageChange(prevPage)
         }
     }
 
     fun onPageSelected(index: Int) {
         _state.update { current ->
             val safeIndex = index.coerceIn(0, current.totalPages - 1)
-            current.copy(currentPage = safeIndex)
+            current.withPageChange(safeIndex)
         }
     }
 
@@ -118,5 +119,18 @@ class OnboardingComponent(
 
     fun onDestroy() {
         scope.cancel()
+    }
+
+    private fun OnboardingState.withPageChange(newPage: Int): OnboardingState {
+        if (newPage == currentPage) return copy(currentPage = newPage)
+
+        val demoState = when (pages.getOrNull(newPage)?.type) {
+            OnboardingPageType.IdeaStudio ->
+                demoState.copy(selectedPromptIndex = 0)
+            OnboardingPageType.ReasoningControl ->
+                demoState.copy(reasoningLevel = DefaultReasoningLevel.toDouble())
+            else -> demoState
+        }
+        return copy(currentPage = newPage, demoState = demoState)
     }
 }

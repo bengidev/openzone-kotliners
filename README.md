@@ -89,6 +89,16 @@ Wire the repository from `MainActivity` (or a future DI graph); do not call Data
 - **Android Release** runs on version tags like `v1.0.0` and manual dispatch.
 - Debug and release APKs are uploaded as GitHub Actions artifacts.
 
+## 📚 Documentation
+
+| Document | Description |
+| -------- | ----------- |
+| [docs/README.md](docs/README.md) | Documentation index |
+| [CONTEXT-MAP.md](CONTEXT-MAP.md) | Domain contexts and glossary paths |
+| [AGENTS.md](AGENTS.md) | Rules for AI agents (layering, issue tracker, triage) |
+| [docs/agents/](docs/agents/) | Issue tracker, triage labels, domain-doc consumer rules |
+| [docs/adr/](docs/adr/) | System-wide architecture decision records |
+
 ## 🤝 Contributing
 
 Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).

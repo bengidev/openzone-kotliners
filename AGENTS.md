@@ -20,12 +20,12 @@ Do not reintroduce a separate `:onboarding` library module unless the team expli
 
 ### Issue tracker
 
-Use GitHub Issues for bugs, feature requests, and implementation tasks.
+GitHub Issues on `bengidev/openzone-kotliners`. See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 
-Five canonical roles mapped 1:1 to label strings of the same name. See `docs/agents/triage-labels.md` when available.
+Five canonical roles mapped 1:1 to label strings of the same name. See `docs/agents/triage-labels.md`.
 
 ### Domain docs
 
-Keep product and architecture notes in documentation files when decisions become stable.
+Multi-context: `CONTEXT-MAP.md` at the repo root points to per-context `CONTEXT.md` files; system-wide ADRs in `docs/adr/`. See `docs/agents/domain.md`.

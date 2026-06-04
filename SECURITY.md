@@ -6,7 +6,9 @@ OpenZone Kotliners is in early development. Security updates apply to the latest
 
 ## Reporting a Vulnerability
 
-If you discover a security issue, please report it privately before public disclosure.
+If you discover a security issue, please report it privately before public disclosure. Do **not** open a public GitHub Issue with exploit details, credentials, or sensitive data.
+
+For non-security bugs and feature requests, use [GitHub Issues](https://github.com/bengidev/openzone-kotliners/issues) and see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Include:
 

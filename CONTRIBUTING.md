@@ -21,11 +21,24 @@ Welcome! Contributions, ideas, and issues are appreciated.
 
 ## Reporting Issues
 
-Open a GitHub Issue with:
+Open a [GitHub Issue](https://github.com/bengidev/openzone-kotliners/issues/new) with:
 
 - Steps to reproduce
 - Expected vs actual behavior
 - Android version + device/emulator
+
+Maintainers may apply [triage labels](docs/agents/triage-labels.md) (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`) to track issue state. See [docs/agents/issue-tracker.md](docs/agents/issue-tracker.md) for CLI conventions.
+
+**Security issues:** follow [SECURITY.md](SECURITY.md) and report privately; do not file public issues with exploit details or secrets.
+
+## Documentation for contributors
+
+| Topic | Location |
+| ----- | -------- |
+| Agent/workflow config | [docs/agents/](docs/agents/) |
+| Domain contexts | [CONTEXT-MAP.md](CONTEXT-MAP.md) |
+| Architecture decisions | [docs/adr/](docs/adr/) |
+| Agent coding rules | [AGENTS.md](AGENTS.md) |
 
 ## License
 

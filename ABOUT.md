@@ -28,6 +28,13 @@ Productivity / AI Assistant / Native Android
 
 Early-stage Android scaffold.
 
+## Documentation
+
+- [README.md](README.md) — build, project structure, CI
+- [CONTEXT-MAP.md](CONTEXT-MAP.md) — domain contexts (multi-context glossaries)
+- [docs/](docs/) — agent workflow config, ADRs, contributing pointers
+- [AGENTS.md](AGENTS.md) — conventions for AI-assisted development
+
 ## Author
 
 [bengidev](https://github.com/bengidev)

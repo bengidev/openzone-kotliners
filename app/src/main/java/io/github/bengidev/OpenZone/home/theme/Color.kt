@@ -8,7 +8,7 @@ import androidx.compose.ui.graphics.Color
  */
 
 // Light
-val HomeBackgroundLight = Color(0xFFFFFFFF)
+val HomeBackgroundLight = Color(0xFFF7F9FD)
 val HomeBackgroundSecondaryLight = Color(0xFFEEEEEE)
 val HomeSurfaceLight = Color(0xFFFFFFFF)
 val HomeElevatedSurfaceLight = Color(0xFFF5F5F5)

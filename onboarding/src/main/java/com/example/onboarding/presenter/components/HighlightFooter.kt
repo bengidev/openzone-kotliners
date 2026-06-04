@@ -14,8 +14,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Shield
@@ -113,12 +116,12 @@ private fun iconForHighlight(title: String): ImageVector {
     return when (title.lowercase()) {
         "local memory" -> Icons.Filled.Menu
         "secure session" -> Icons.Filled.Shield
-        "design canvas" -> Icons.Filled.Menu
-        "ai assistance" -> Icons.Filled.Check
+        "design canvas" -> Icons.Filled.Layers
+        "ai assistance" -> Icons.Filled.AutoAwesome
         "state engine" -> Icons.Filled.Menu
         "run steering" -> Icons.AutoMirrored.Filled.ArrowForward
         "model controls" -> Icons.Filled.Settings
-        "human steering" -> Icons.Filled.Check
+        "human steering" -> Icons.Filled.Person
         else -> Icons.Filled.PlayArrow
     }
 }

@@ -1,5 +1,7 @@
 package com.example.onboarding.presenter.visuals
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Canvas
@@ -10,30 +12,37 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
+import com.example.onboarding.presenter.components.ReasoningLevelSlider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.onboarding.theme.OnboardingTheme
 import kotlin.math.abs
 import kotlin.math.roundToInt
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+
+/** Default reasoning level — matches iOS demo (BALANCED). */
+const val DefaultReasoningLevel = 0.62f
 
 /** iOS-matched reasoning control: ring, slider, presets, bar chart. */
 @Composable
@@ -44,8 +53,6 @@ fun ReasoningControlVisualView(
     appeared: Boolean = true
 ) {
     val palette = OnboardingTheme.palette
-    val spacing = OnboardingTheme.spacing
-    val radius = OnboardingTheme.radius
 
     val levelName = when {
         reasoningLevel < 0.38f -> "FAST ANSWER"
@@ -57,8 +64,9 @@ fun ReasoningControlVisualView(
     Column(
         modifier = modifier
             .fillMaxWidth()
+            .fillMaxHeight()
             .padding(horizontal = 4.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Row(
@@ -90,15 +98,10 @@ fun ReasoningControlVisualView(
             }
         }
 
-        Slider(
+        ReasoningLevelSlider(
             value = reasoningLevel,
             onValueChange = onReasoningLevelChanged,
-            modifier = Modifier.fillMaxWidth(),
-            colors = SliderDefaults.colors(
-                thumbColor = palette.surfaceRaised,
-                activeTrackColor = palette.accentPrimary,
-                inactiveTrackColor = palette.lineSoft.copy(alpha = 0.75f)
-            )
+            modifier = Modifier.fillMaxWidth()
         )
 
         Row(
@@ -125,24 +128,29 @@ private fun ReasoningRing(value: Float, label: String, modifier: Modifier = Modi
     val palette = OnboardingTheme.palette
     val animatedValue by animateFloatAsState(
         targetValue = value,
-        animationSpec = spring(),
+        animationSpec = spring(
+            dampingRatio = 0.74f,
+            stiffness = Spring.StiffnessMediumLow
+        ),
         label = "reasoning_ring"
     )
 
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         Canvas(modifier = Modifier.matchParentSize()) {
-            val stroke = 5.dp.toPx()
+            val progressStroke = 5.dp.toPx()
+            val trackStroke = 1.dp.toPx()
+            val radius = size.minDimension / 2f - progressStroke / 2f
             drawCircle(
                 color = palette.lineSoft.copy(alpha = 0.75f),
-                radius = size.minDimension / 2f - stroke / 2f,
-                style = Stroke(stroke)
+                radius = radius,
+                style = Stroke(trackStroke)
             )
             drawArc(
                 color = palette.accentPrimary,
                 startAngle = -90f,
                 sweepAngle = 360f * animatedValue,
                 useCenter = false,
-                style = Stroke(stroke, cap = StrokeCap.Round)
+                style = Stroke(progressStroke, cap = StrokeCap.Round)
             )
         }
         Text(
@@ -192,29 +200,78 @@ private fun ComputeBudgetChart(
     appeared: Boolean,
     modifier: Modifier = Modifier
 ) {
-    val palette = OnboardingTheme.palette
-    val radius = OnboardingTheme.radius
     val barHeights = listOf(12.dp, 16.dp, 20.dp, 24.dp, 28.dp, 32.dp, 36.dp, 40.dp)
 
     Row(
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.Center,
+        horizontalArrangement = Arrangement.spacedBy(7.dp, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.Bottom
     ) {
         barHeights.forEachIndexed { index, height ->
-            if (index > 0) Spacer(modifier = Modifier.width(7.dp))
             val normalizedIndex = (index + 1) / 8f
             val isActive = normalizedIndex <= reasoningLevel
-            Box(
-                modifier = Modifier
-                    .width(18.dp)
-                    .height(height)
-                    .clip(RoundedCornerShape(3.dp))
-                    .background(
-                        if (isActive) palette.accentPrimary
-                        else palette.textTertiary.copy(alpha = 0.22f)
-                    )
+            BudgetBar(
+                height = height,
+                isActive = isActive,
+                index = index,
+                appeared = appeared,
+                modifier = Modifier.weight(1f)
             )
         }
     }
+}
+
+@Composable
+private fun BudgetBar(
+    height: Dp,
+    isActive: Boolean,
+    index: Int,
+    appeared: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val palette = OnboardingTheme.palette
+    val barScaleY = remember { Animatable(0.35f) }
+    val barAlpha = remember { Animatable(0f) }
+
+    LaunchedEffect(appeared) {
+        if (appeared) {
+            delay(index * 35L)
+            launch {
+                barScaleY.animateTo(
+                    targetValue = 1f,
+                    animationSpec = spring(
+                        dampingRatio = 0.8f,
+                        stiffness = Spring.StiffnessMedium
+                    )
+                )
+            }
+            launch {
+                barAlpha.animateTo(
+                    targetValue = 1f,
+                    animationSpec = spring(
+                        dampingRatio = 0.8f,
+                        stiffness = Spring.StiffnessMedium
+                    )
+                )
+            }
+        } else {
+            barScaleY.snapTo(0.35f)
+            barAlpha.snapTo(0f)
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .height(height)
+            .graphicsLayer {
+                this.alpha = barAlpha.value
+                scaleY = barScaleY.value
+                transformOrigin = TransformOrigin(0.5f, 1f)
+            }
+            .clip(RoundedCornerShape(3.dp))
+            .background(
+                if (isActive) palette.accentPrimary
+                else palette.textTertiary.copy(alpha = 0.22f)
+            )
+    )
 }

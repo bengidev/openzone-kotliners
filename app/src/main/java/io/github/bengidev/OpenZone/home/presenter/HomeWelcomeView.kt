@@ -1,5 +1,6 @@
 package io.github.bengidev.openzone.home.presenter
 
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -28,6 +29,8 @@ fun HomeWelcomeView(
             .padding(horizontal = 28.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        Spacer(modifier = Modifier.height(72.dp))
+
         HomeParticleOrbView(
             modifier = Modifier
                 .fillMaxWidth()
@@ -38,7 +41,7 @@ fun HomeWelcomeView(
         ScaleToFitText(
             text = "Hi! How can I help you?",
             style = HomeTheme.typography.welcomeTitle,
-            color = palette.textSecondary,
+            color = palette.textPrimary,
             maxLines = 1,
             minFontSize = 19.sp,
             modifier = Modifier.fillMaxWidth(),
@@ -60,5 +63,7 @@ fun HomeWelcomeView(
             modifier = Modifier.padding(top = 4.dp),
             textAlign = TextAlign.Center
         )
+
+        Spacer(modifier = Modifier.weight(1f))
     }
 }

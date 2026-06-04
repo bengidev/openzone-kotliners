@@ -2,6 +2,7 @@ package io.github.bengidev.openzone.home
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -73,11 +74,12 @@ fun HomeScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding),
-                contentAlignment = Alignment.Center
+                contentAlignment = Alignment.TopCenter
             ) {
                 HomeWelcomeView(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .fillMaxHeight()
                         .widthIn(max = 680.dp)
                         .padding(horizontal = 8.dp)
                 )

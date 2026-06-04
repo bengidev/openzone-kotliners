@@ -24,4 +24,3 @@ dependencyResolutionManagement {
 
 rootProject.name = "OpenZone"
 include(":app")
-include(":onboarding")

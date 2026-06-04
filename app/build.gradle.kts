@@ -43,13 +43,13 @@ android {
 }
 
 dependencies {
-    // Onboarding module
-    implementation(project(":onboarding"))
-
-    // Decompose
-    implementation("com.arkivanov.decompose:decompose:3.5.0")
-    implementation("com.arkivanov.decompose:extensions-compose:3.5.0")
+    // Decompose (onboarding flow)
+    implementation(libs.decompose)
+    implementation(libs.decompose.extensions.compose)
     implementation("com.arkivanov.essenty:lifecycle:2.5.0")
+
+    // Onboarding persistence
+    implementation(libs.androidx.datastore.preferences)
 
     // Activity Compose
     implementation("androidx.activity:activity-compose:1.8.2")
@@ -58,6 +58,9 @@ dependencies {
     implementation(platform("androidx.compose:compose-bom:2026.02.01"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.material3:material3")
+    implementation(libs.androidx.compose.animation)
+    implementation("androidx.compose.material:material-icons-extended")
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
 
     // Material
     implementation("com.google.android.material:material:1.12.0")

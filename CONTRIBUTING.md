@@ -16,6 +16,7 @@ Welcome! Contributions, ideas, and issues are appreciated.
 - Jetpack Compose idioms
 - Prefer small, composable UI functions
 - Keep AI provider code behind an abstraction; no hard-coded vendor calls in views
+- Feature areas (e.g. onboarding) belong in internal packages under `app/src/main/java/io/github/bengidev/openzone/`; use layered packages (`domain`, `application`, `infrastructure`, `presenter`) and repository interfaces for persistence
 - Do not commit secrets, API keys, tokens, or local machine config
 
 ## Reporting Issues

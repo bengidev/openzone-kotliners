@@ -50,14 +50,38 @@ Open the project in Android Studio, select an emulator/device, and run the **app
 
 ## 📂 Project Structure
 
+The app ships as a single Gradle module (`:app`). Feature areas such as onboarding live as **internal packages** inside the app module (not separate Gradle library modules).
+
 ```text
 app/
-├── src/main/java/io/github/bengidev/OpenZone/MainActivity.kt  # App entry point
-├── src/main/java/io/github/bengidev/OpenZone/ui/theme/        # Compose theme
-├── src/main/res/                                              # Android resources
-app/src/test/                                                  # Unit tests
-app/src/androidTest/                                           # Instrumented tests
+├── src/main/java/io/github/bengidev/openzone/
+│   ├── MainActivity.kt                    # App entry point
+│   ├── ui/theme/                          # App-wide Compose theme
+│   └── onboarding/                        # Onboarding feature (internal module)
+│       ├── OnboardingScreen.kt            # Root composable
+│       ├── domain/                        # Page models and enums
+│       ├── application/                   # OnboardingComponent, OnboardingState
+│       ├── infrastructure/                # OnboardingRepository + DataStore impl
+│       ├── presenter/                     # Compose UI and page visuals
+│       └── theme/                         # Onboarding design tokens
+├── src/main/res/                          # Android resources
+├── src/test/                              # Unit tests
+└── src/androidTest/                       # Instrumented tests
 ```
+
+### Onboarding layering
+
+Persistence and navigation stay behind abstractions so UI and storage can evolve independently:
+
+| Layer | Responsibility |
+|-------|----------------|
+| `domain` | Onboarding pages, types, demo models |
+| `application` | Flow state and actions (`OnboardingComponent`) |
+| `infrastructure` | `OnboardingRepository` interface; `DataStoreOnboardingRepository` in the app |
+| `presenter` | Jetpack Compose screens and per-page visuals |
+| `theme` | Onboarding-specific colors, typography, spacing |
+
+Wire the repository from `MainActivity` (or a future DI graph); do not call DataStore directly from composables.
 
 ## ✅ CI/CD
 

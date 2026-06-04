@@ -6,9 +6,9 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import com.arkivanov.decompose.DefaultComponentContext
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
-import com.example.onboarding.OnboardingScreen
-import com.example.onboarding.application.OnboardingComponent
-import com.example.onboarding.infrastructure.DataStoreOnboardingRepository
+import io.github.bengidev.openzone.onboarding.OnboardingScreen
+import io.github.bengidev.openzone.onboarding.application.OnboardingComponent
+import io.github.bengidev.openzone.onboarding.infrastructure.DataStoreOnboardingRepository
 import io.github.bengidev.openzone.ui.theme.OpenZoneTheme
 
 class MainActivity : ComponentActivity() {

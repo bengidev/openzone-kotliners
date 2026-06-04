@@ -190,20 +190,17 @@ fun FeaturePageView(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         TerminalHeader(page = page)
-                        Box(
-                            modifier = Modifier.weight(1f),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            PageVisualFactory(
-                                page = page,
-                                state = state,
-                                appeared = appeared,
-                                onPromptChipTapped = onPromptChipTapped,
-                                onPairingToggleTapped = onPairingToggleTapped,
-                                onReasoningLevelChanged = onReasoningLevelChanged,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
+                        PageVisualFactory(
+                            page = page,
+                            state = state,
+                            appeared = appeared,
+                            onPromptChipTapped = onPromptChipTapped,
+                            onPairingToggleTapped = onPairingToggleTapped,
+                            onReasoningLevelChanged = onReasoningLevelChanged,
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxWidth()
+                        )
                         if (page.highlights.isNotEmpty()) {
                             HighlightFooter(highlights = page.highlights)
                         }

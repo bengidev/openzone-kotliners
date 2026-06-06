@@ -1,74 +1,20 @@
 package io.github.bengidev.openzone.home.theme
 
-import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
-import androidx.compose.ui.graphics.Color
+import io.github.bengidev.openzone.ui.theme.LightOpenZonePalette
+import io.github.bengidev.openzone.ui.theme.OpenZonePalette
 
-@Immutable
-data class HomePalette(
-    val isDark: Boolean,
-    val background: Color,
-    val backgroundSecondary: Color,
-    val surface: Color,
-    val elevatedSurface: Color,
-    val inverseSurface: Color,
-    val textPrimary: Color,
-    val textSecondary: Color,
-    val textMuted: Color,
-    val border: Color,
-    val strongBorder: Color,
-    val accent: Color,
-    val accentSoft: Color,
-    val accentText: Color,
-    val success: Color,
-    val warning: Color,
-    val primaryActionFill: Color,
-    val primaryActionText: Color,
-    val orbTint: Color
-)
+/**
+ * Home palette — typealias to the authoritative `OpenZonePalette`
+ * (iOS-faithful graphite monochrome).
+ *
+ * Kept as a typealias (not removed) so existing Home call-sites that
+ * import `HomePalette` keep compiling. All new code should import
+ * `OpenZonePalette` directly from `ui.theme`.
+ */
+typealias HomePalette = OpenZonePalette
 
-val LightHomePalette = HomePalette(
-    isDark = false,
-    background = HomeBackgroundLight,
-    backgroundSecondary = HomeBackgroundSecondaryLight,
-    surface = HomeSurfaceLight,
-    elevatedSurface = HomeElevatedSurfaceLight,
-    inverseSurface = HomeInverseSurfaceLight,
-    textPrimary = HomeTextPrimaryLight,
-    textSecondary = HomeTextSecondaryLight,
-    textMuted = HomeTextMutedLight,
-    border = HomeBorderLight,
-    strongBorder = HomeStrongBorderLight,
-    accent = HomeAccentLight,
-    accentSoft = HomeAccentSoftLight,
-    accentText = HomeAccentTextLight,
-    success = HomeSuccessLight,
-    warning = HomeWarningLight,
-    primaryActionFill = HomePrimaryActionFillLight,
-    primaryActionText = HomePrimaryActionTextLight,
-    orbTint = HomeOrbTintLight
-)
+val LightHomePalette: HomePalette = LightOpenZonePalette
+val DarkHomePalette: HomePalette = io.github.bengidev.openzone.ui.theme.DarkOpenZonePalette
 
-val DarkHomePalette = HomePalette(
-    isDark = true,
-    background = HomeBackgroundDark,
-    backgroundSecondary = HomeBackgroundSecondaryDark,
-    surface = HomeSurfaceDark,
-    elevatedSurface = HomeElevatedSurfaceDark,
-    inverseSurface = HomeInverseSurfaceDark,
-    textPrimary = HomeTextPrimaryDark,
-    textSecondary = HomeTextSecondaryDark,
-    textMuted = HomeTextMutedDark,
-    border = HomeBorderDark,
-    strongBorder = HomeStrongBorderDark,
-    accent = HomeAccentDark,
-    accentSoft = HomeAccentSoftDark,
-    accentText = HomeAccentTextDark,
-    success = HomeSuccessDark,
-    warning = HomeWarningDark,
-    primaryActionFill = HomePrimaryActionFillDark,
-    primaryActionText = HomePrimaryActionTextDark,
-    orbTint = HomeOrbTintDark
-)
-
-val LocalHomePalette = staticCompositionLocalOf { LightHomePalette }
+val LocalHomePalette = staticCompositionLocalOf<HomePalette> { LightHomePalette }

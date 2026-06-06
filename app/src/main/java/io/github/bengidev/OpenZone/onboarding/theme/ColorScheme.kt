@@ -1,81 +1,24 @@
 package io.github.bengidev.openzone.onboarding.theme
 
-import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
-import androidx.compose.ui.graphics.Color
+import io.github.bengidev.openzone.ui.theme.LightOpenZonePalette
+import io.github.bengidev.openzone.ui.theme.OpenZonePalette
 
 /**
- * Semantic color palette for OpenZone onboarding.
- * Wraps all design tokens with semantic names for easy consumption.
+ * Onboarding palette — typealias to the authoritative `OpenZonePalette`
+ * (iOS-faithful graphite monochrome). Kept as a typealias (not removed)
+ * so existing onboarding call-sites that import `OnboardingPalette` keep
+ * compiling. All new code should import `OpenZonePalette` directly from
+ * `ui.theme`.
+ *
+ * Migration notes:
+ * - Removed `galaxyAura` token (was blue-tinted overlay, unused in code).
+ * - Removed `isDark` discriminator as a top-level field (still available
+ *   as `palette.isDark` on the underlying `OpenZonePalette`).
  */
-@Immutable
-data class OnboardingPalette(
-    val surfaceBase: Color,
-    val surfacePaper: Color,
-    val surfaceRaised: Color,
-    val surfaceSubtle: Color,
-    val surfaceGalaxyTint: Color,
-    val textPrimary: Color,
-    val textSecondary: Color,
-    val textTertiary: Color,
-    val lineSoft: Color,
-    val lineStrong: Color,
-    val accentPrimary: Color,
-    val accentDeep: Color,
-    val accentSoft: Color,
-    val controlStrong: Color,
-    val controlStrongText: Color,
-    val danger: Color,
-    val success: Color,
-    val warning: Color,
-    val galaxyAura: Color,
-    val isDark: Boolean
-)
+typealias OnboardingPalette = OpenZonePalette
 
-val LightOnboardingPalette = OnboardingPalette(
-    surfaceBase = SurfaceBaseLight,
-    surfacePaper = SurfacePaperLight,
-    surfaceRaised = SurfaceRaisedLight,
-    surfaceSubtle = SurfaceSubtleLight,
-    surfaceGalaxyTint = SurfaceGalaxyTintLight,
-    textPrimary = TextPrimaryLight,
-    textSecondary = TextSecondaryLight,
-    textTertiary = TextTertiaryLight,
-    lineSoft = LineSoftLight,
-    lineStrong = LineStrongLight,
-    accentPrimary = AccentPrimaryLight,
-    accentDeep = AccentDeepLight,
-    accentSoft = AccentSoftLight,
-    controlStrong = ControlStrongLight,
-    controlStrongText = ControlStrongTextLight,
-    danger = DangerLight,
-    success = SuccessLight,
-    warning = WarningLight,
-    galaxyAura = GalaxyAuraLight,
-    isDark = false
-)
+val LightOnboardingPalette: OnboardingPalette = LightOpenZonePalette
+val DarkOnboardingPalette: OnboardingPalette = io.github.bengidev.openzone.ui.theme.DarkOpenZonePalette
 
-val DarkOnboardingPalette = OnboardingPalette(
-    surfaceBase = SurfaceBaseDark,
-    surfacePaper = SurfacePaperDark,
-    surfaceRaised = SurfaceRaisedDark,
-    surfaceSubtle = SurfaceSubtleDark,
-    surfaceGalaxyTint = SurfaceGalaxyTintDark,
-    textPrimary = TextPrimaryDark,
-    textSecondary = TextSecondaryDark,
-    textTertiary = TextTertiaryDark,
-    lineSoft = LineSoftDark,
-    lineStrong = LineStrongDark,
-    accentPrimary = AccentPrimaryDark,
-    accentDeep = AccentDeepDark,
-    accentSoft = AccentSoftDark,
-    controlStrong = ControlStrongDark,
-    controlStrongText = ControlStrongTextDark,
-    danger = DangerDark,
-    success = SuccessDark,
-    warning = WarningDark,
-    galaxyAura = GalaxyAuraDark,
-    isDark = true
-)
-
-val LocalOnboardingPalette = staticCompositionLocalOf { LightOnboardingPalette }
+val LocalOnboardingPalette = staticCompositionLocalOf<OnboardingPalette> { LightOnboardingPalette }

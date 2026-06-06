@@ -36,11 +36,12 @@ import io.github.bengidev.openzone.onboarding.theme.OpenZoneOnboardingTheme
 @Composable
 fun OnboardingScreen(
     component: OnboardingComponent,
-    onThemeToggle: (() -> Unit)? = null
+    darkTheme: Boolean,
+    onThemeToggle: () -> Unit
 ) {
     val state by component.state.subscribeAsState()
 
-    OpenZoneOnboardingTheme {
+    OpenZoneOnboardingTheme(darkTheme = darkTheme) {
         BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
@@ -79,7 +80,7 @@ fun OnboardingScreen(
                     currentPage = state.currentPage,
                     totalPages = state.totalPages,
                     onSkip = component::onSkipTapped,
-                    onThemeToggle = { onThemeToggle?.invoke() }
+                    onThemeToggle = onThemeToggle
                 )
 
                 Spacer(modifier = Modifier.height(if (compactHeight) 12.dp else 18.dp))

@@ -4,6 +4,8 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -14,11 +16,14 @@ import io.github.bengidev.openzone.home.application.HomeComponent
 import io.github.bengidev.openzone.onboarding.OnboardingScreen
 import io.github.bengidev.openzone.onboarding.application.OnboardingComponent
 import io.github.bengidev.openzone.onboarding.infrastructure.DataStoreOnboardingRepository
+import io.github.bengidev.openzone.ui.theme.AppTheme
+import io.github.bengidev.openzone.ui.theme.LocalAppTheme
 import io.github.bengidev.openzone.ui.theme.OpenZoneTheme
 
 class MainActivity : ComponentActivity() {
     private val lifecycleRegistry = LifecycleRegistry()
     private var showHome by mutableStateOf(false)
+    private var appTheme by mutableStateOf(AppTheme.System)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -38,14 +43,20 @@ class MainActivity : ComponentActivity() {
         )
 
         setContent {
-            OpenZoneTheme(dynamicColor = false) {
-                if (showHome) {
-                    HomeScreen(component = homeComponent)
-                } else {
-                    OnboardingScreen(
-                        component = onboardingComponent,
-                        onThemeToggle = null
-                    )
+            val systemDark = isSystemInDarkTheme()
+            val darkTheme = appTheme.resolveDark(systemDark)
+
+            CompositionLocalProvider(LocalAppTheme provides appTheme) {
+                OpenZoneTheme(darkTheme = darkTheme, dynamicColor = false) {
+                    if (showHome) {
+                        HomeScreen(component = homeComponent, darkTheme = darkTheme)
+                    } else {
+                        OnboardingScreen(
+                            component = onboardingComponent,
+                            darkTheme = darkTheme,
+                            onThemeToggle = { appTheme = appTheme.next }
+                        )
+                    }
                 }
             }
         }

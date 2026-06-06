@@ -43,7 +43,7 @@ fun OnboardingTopBar(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(9.dp)
         ) {
-            ThemeToggleButton(onClick = onThemeToggle, isDark = palette.isDark)
+            ThemeToggleButton(onClick = onThemeToggle)
 
             Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                 Text(

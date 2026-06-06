@@ -5,8 +5,10 @@ Multi-context domain documentation for OpenZone. Before changing an area, read i
 | Context | Glossary | Scope |
 | ------- | -------- | ----- |
 | **App** | [`app/CONTEXT.md`](app/CONTEXT.md) | App module shell, `MainActivity`, app-wide Compose theme, navigation |
-| **Onboarding** | [`app/src/main/java/io/github/bengidev/openzone/onboarding/CONTEXT.md`](app/src/main/java/io/github/bengidev/openzone/onboarding/CONTEXT.md) | Onboarding pages, flow state, repository abstraction, presenter visuals |
+| **Onboarding** | [`app/src/main/java/io/github/bengidev/openzone/onboarding/CONTEXT.md`](app/src/main/java/io/github/bengidev/openzone/onboarding/CONTEXT.md) | Onboarding pages, flow state, DataStore repository, presenter visuals; `OnboardingPalette` is a typealias of `OpenZonePalette` (graphite) |
 | **Home** | — | Welcome shell, composer, particle orb; Decompose `HomeComponent`; palette from iOS `OpenSpacePalette` |
+| **Chat** | [`app/src/main/java/io/github/bengidev/openzone/chat/CONTEXT.md`](app/src/main/java/io/github/bengidev/openzone/chat/CONTEXT.md) | Streaming chat thread, reasoning cards, mock API client; mirrors iOS `ChatFeature`; child of `HomeComponent` |
+| **Theme** | [`app/src/main/java/io/github/bengidev/openzone/ui/theme/Palette.kt`](app/src/main/java/io/github/bengidev/openzone/ui/theme/Palette.kt) | Authoritative `OpenZonePalette` (iOS-faithful graphite monochrome) used by Home + Chat |
 
 **System-wide ADRs:** [`docs/adr/`](docs/adr/)
 

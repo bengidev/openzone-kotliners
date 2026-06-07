@@ -1,68 +1,96 @@
 package io.github.bengidev.openzone.settings.domain
 
+import io.github.bengidev.openzone.shared.networking.ChatModel
+
 /**
- * Curated fallback catalog of free models, used when a live model list is
- * unavailable (offline, no key yet, or provider list fetch out of scope for
- * this slice). Mirrors the iOS curated free-model fallback.
+ * Curated fallback catalog of free models. Used when a live model list is
+ * unavailable (offline, no key yet). All slugs verified against the live
+ * OpenRouter `/models` endpoint on 2026-06-07.
  *
- * All entries are OpenRouter free-tier model identifiers (the `:free` suffix is
- * part of OpenRouter's id scheme). Kept deliberately small and stable; a live
- * catalog fetch can layer on top in a later slice without changing this seam.
+ * Produces [ChatModel] instances — the single shared model-identity type used
+ * by both Home and Settings. `CatalogModel` is retired; callers that previously
+ * used `CatalogModel` should switch to `ChatModel` from `shared/networking`.
+ *
+ * Mirrors iOS `ChatModelCatalog`.
  */
 object ModelCatalog {
 
-    /** OpenRouter free-tier fallback models (provider id `"openrouter"`). */
-    val openRouterFree: List<CatalogModel> = listOf(
-        CatalogModel(
-            id = "deepseek/deepseek-chat-v3-0324:free",
-            displayName = "DeepSeek V3 0324",
-            providerId = "openrouter",
-            description = "General-purpose chat, strong reasoning"
-        ),
-        CatalogModel(
-            id = "deepseek/deepseek-r1:free",
-            displayName = "DeepSeek R1",
-            providerId = "openrouter",
-            description = "Reasoning-tuned, emits thinking traces"
-        ),
-        CatalogModel(
+    /** OpenRouter free-tier fallback models, in display order. */
+    val openRouterFree: List<ChatModel> = listOf(
+        ChatModel(
             id = "meta-llama/llama-3.3-70b-instruct:free",
             displayName = "Llama 3.3 70B Instruct",
             providerId = "openrouter",
+            isFree = true,
+            contextLength = 131_072,
+            supportsReasoning = false,
             description = "Meta instruct model, broad knowledge"
         ),
-        CatalogModel(
-            id = "google/gemini-2.0-flash-exp:free",
-            displayName = "Gemini 2.0 Flash (exp)",
+        ChatModel(
+            id = "nousresearch/hermes-3-llama-3.1-405b:free",
+            displayName = "Hermes 3 405B Instruct",
             providerId = "openrouter",
-            description = "Fast, multimodal-capable"
+            isFree = true,
+            contextLength = 131_072,
+            supportsReasoning = false,
+            description = "Nous Research, strong instruction following"
         ),
-        CatalogModel(
-            id = "qwen/qwen-2.5-72b-instruct:free",
-            displayName = "Qwen 2.5 72B Instruct",
+        ChatModel(
+            id = "nvidia/nemotron-3-ultra-550b-a55b:free",
+            displayName = "Nemotron 3 Ultra 550B",
             providerId = "openrouter",
-            description = "Multilingual, strong coding"
+            isFree = true,
+            contextLength = 1_000_000,
+            supportsReasoning = true,
+            description = "NVIDIA, 1M context, reasoning support"
         ),
-        CatalogModel(
-            id = "mistralai/mistral-small-3.1-24b-instruct:free",
-            displayName = "Mistral Small 3.1 24B",
+        ChatModel(
+            id = "google/gemma-4-31b-it:free",
+            displayName = "Gemma 4 31B",
             providerId = "openrouter",
-            description = "Lightweight, low-latency"
+            isFree = true,
+            contextLength = 262_144,
+            supportsReasoning = false,
+            description = "Google, 262K context, instruction tuned"
+        ),
+        ChatModel(
+            id = "qwen/qwen3-coder:free",
+            displayName = "Qwen3 Coder 480B",
+            providerId = "openrouter",
+            isFree = true,
+            contextLength = 1_048_576,
+            supportsReasoning = false,
+            description = "Qwen, 1M context, strong at coding"
+        ),
+        ChatModel(
+            id = "moonshotai/kimi-k2.6:free",
+            displayName = "Kimi K2.6",
+            providerId = "openrouter",
+            isFree = true,
+            contextLength = 262_144,
+            supportsReasoning = false,
+            description = "Moonshot AI, 262K context"
         )
     )
 
-    /** All curated models across providers, keyed lookups derive from this. */
-    val all: List<CatalogModel> = openRouterFree
+    /** All curated models across providers, in display order. */
+    val all: List<ChatModel> = openRouterFree
 
     /** Curated models for [providerId], in display order. */
-    fun forProvider(providerId: String): List<CatalogModel> =
+    fun forProvider(providerId: String): List<ChatModel> =
         all.filter { it.providerId == providerId }
 
     /** The default model id for [providerId], or `null` if none is curated. */
     fun defaultModelId(providerId: String): String? =
         forProvider(providerId).firstOrNull()?.id
 
-    /** Look up a single catalog model by its [modelId]. */
-    fun modelById(modelId: String): CatalogModel? =
+    /** Look up a single model by its [modelId]. */
+    fun modelById(modelId: String): ChatModel? =
         all.firstOrNull { it.id == modelId }
+
+    /** Look up a model by [modelId] for the given [providerId]. */
+    fun option(modelId: String?, providerId: String?): ChatModel? {
+        if (modelId == null) return null
+        return forProvider(providerId ?: "openrouter").firstOrNull { it.id == modelId }
+    }
 }

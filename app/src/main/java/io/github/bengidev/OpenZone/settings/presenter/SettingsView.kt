@@ -33,7 +33,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.bengidev.openzone.settings.application.SettingsState
-import io.github.bengidev.openzone.settings.domain.CatalogModel
+import io.github.bengidev.openzone.shared.networking.ChatModel
 import io.github.bengidev.openzone.settings.theme.SettingsTheme
 import io.github.bengidev.openzone.shared.networking.ChatProvider
 
@@ -235,7 +235,7 @@ private fun ProviderRow(
 
 @Composable
 private fun ModelRow(
-    model: CatalogModel,
+    model: ChatModel,
     selected: Boolean,
     onClick: () -> Unit
 ) {

@@ -54,10 +54,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.bengidev.openzone.home.application.HomeState
 import io.github.bengidev.openzone.home.domain.ComposerContextUsage
-import io.github.bengidev.openzone.home.domain.ComposerModelOption
 import io.github.bengidev.openzone.home.domain.ComposerReasoningLevel
 import io.github.bengidev.openzone.home.domain.ComposerSpeedMode
 import io.github.bengidev.openzone.home.presenter.components.ComposerContextUsagePopover
+import io.github.bengidev.openzone.home.presenter.components.ComposerModelPopup
 import io.github.bengidev.openzone.home.theme.HomeTheme
 import io.github.bengidev.openzone.home.theme.homeComposerTextFieldColors
 
@@ -69,7 +69,11 @@ fun HomeComposerView(
     onSendTapped: () -> Unit,
     onAttachmentTapped: () -> Unit,
     onMicrophoneTapped: () -> Unit,
-    onModelSelected: (ComposerModelOption) -> Unit,
+    onModelPopupOpen: () -> Unit,
+    onModelPopupDismiss: () -> Unit,
+    onModelSearchQueryChanged: (String) -> Unit,
+    onModelFilterFreeOnlyToggled: () -> Unit,
+    onModelSelected: (String) -> Unit,
     onReasoningLevelSelected: (ComposerReasoningLevel) -> Unit,
     onSpeedModeSelected: (ComposerSpeedMode) -> Unit,
     onContextUsageTapped: () -> Unit,
@@ -94,6 +98,10 @@ fun HomeComposerView(
         )
         ComposerContextRail(
             state = state,
+            onModelPopupOpen = onModelPopupOpen,
+            onModelPopupDismiss = onModelPopupDismiss,
+            onModelSearchQueryChanged = onModelSearchQueryChanged,
+            onModelFilterFreeOnlyToggled = onModelFilterFreeOnlyToggled,
             onModelSelected = onModelSelected,
             onReasoningLevelSelected = onReasoningLevelSelected,
             onSpeedModeSelected = onSpeedModeSelected,
@@ -139,81 +147,81 @@ private fun ComposerPromptPanel(
             .padding(top = 14.dp, bottom = 10.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-            TextField(
-                value = draftMessage,
-                onValueChange = onDraftMessageChanged,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .defaultMinSize(minHeight = 50.dp),
-                placeholder = {
-                    Text(
-                        text = "Ask anything... @files, \$skills, /commands",
-                        style = HomeTheme.typography.composerInput
-                    )
-                },
-                textStyle = HomeTheme.typography.composerInput,
-                colors = homeComposerTextFieldColors(),
-                singleLine = false,
-                maxLines = 5
-            )
+        TextField(
+            value = draftMessage,
+            onValueChange = onDraftMessageChanged,
+            modifier = Modifier
+                .fillMaxWidth()
+                .defaultMinSize(minHeight = 50.dp),
+            placeholder = {
+                Text(
+                    text = "Ask anything... @files, \$skills, /commands",
+                    style = HomeTheme.typography.composerInput
+                )
+            },
+            textStyle = HomeTheme.typography.composerInput,
+            colors = homeComposerTextFieldColors(),
+            singleLine = false,
+            maxLines = 5
+        )
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            ComposerPromptIconButton(
+                onClick = onAttachmentTapped,
+                contentDescription = "Add attachment"
             ) {
-                ComposerPromptIconButton(
-                    onClick = onAttachmentTapped,
-                    contentDescription = "Add attachment"
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = null,
-                        modifier = Modifier.size(14.dp),
-                        tint = palette.textMuted
-                    )
-                }
-
-                Spacer(modifier = Modifier.weight(1f))
-
-                ComposerPromptIconButton(
-                    onClick = onMicrophoneTapped,
-                    contentDescription = "Start voice input"
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Mic,
-                        contentDescription = null,
-                        modifier = Modifier.size(14.dp),
-                        tint = palette.textMuted
-                    )
-                }
-
-                FilledIconButton(
-                    onClick = onSendTapped,
-                    enabled = canSend,
-                    modifier = Modifier.size(34.dp),
-                    colors = IconButtonDefaults.filledIconButtonColors(
-                        containerColor = if (canSend) {
-                            palette.primaryActionFill
-                        } else {
-                            palette.inverseSurface.copy(alpha = 0.08f)
-                        },
-                        contentColor = if (canSend) {
-                            palette.primaryActionText
-                        } else {
-                            palette.textMuted
-                        },
-                        disabledContainerColor = palette.inverseSurface.copy(alpha = 0.08f),
-                        disabledContentColor = palette.textMuted
-                    )
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.ArrowUpward,
-                        contentDescription = "Send message",
-                        modifier = Modifier.size(15.dp)
-                    )
-                }
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = null,
+                    modifier = Modifier.size(14.dp),
+                    tint = palette.textMuted
+                )
             }
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            ComposerPromptIconButton(
+                onClick = onMicrophoneTapped,
+                contentDescription = "Start voice input"
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Mic,
+                    contentDescription = null,
+                    modifier = Modifier.size(14.dp),
+                    tint = palette.textMuted
+                )
+            }
+
+            FilledIconButton(
+                onClick = onSendTapped,
+                enabled = canSend,
+                modifier = Modifier.size(34.dp),
+                colors = IconButtonDefaults.filledIconButtonColors(
+                    containerColor = if (canSend) {
+                        palette.primaryActionFill
+                    } else {
+                        palette.inverseSurface.copy(alpha = 0.08f)
+                    },
+                    contentColor = if (canSend) {
+                        palette.primaryActionText
+                    } else {
+                        palette.textMuted
+                    },
+                    disabledContainerColor = palette.inverseSurface.copy(alpha = 0.08f),
+                    disabledContentColor = palette.textMuted
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ArrowUpward,
+                    contentDescription = "Send message",
+                    modifier = Modifier.size(15.dp)
+                )
+            }
+        }
     }
 }
 
@@ -234,7 +242,11 @@ private fun ComposerPromptIconButton(
 @Composable
 private fun ComposerContextRail(
     state: HomeState,
-    onModelSelected: (ComposerModelOption) -> Unit,
+    onModelPopupOpen: () -> Unit,
+    onModelPopupDismiss: () -> Unit,
+    onModelSearchQueryChanged: (String) -> Unit,
+    onModelFilterFreeOnlyToggled: () -> Unit,
+    onModelSelected: (String) -> Unit,
     onReasoningLevelSelected: (ComposerReasoningLevel) -> Unit,
     onSpeedModeSelected: (ComposerSpeedMode) -> Unit,
     onContextUsageTapped: () -> Unit,
@@ -258,38 +270,45 @@ private fun ComposerContextRail(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.weight(1f, fill = false)
-        ) {
-            ComposerModelChip(
-                selectedModel = state.selectedModel,
-                onModelSelected = onModelSelected
-            )
-            ComposerReasoningChip(
-                selectedLevel = state.reasoningLevel,
-                onLevelSelected = onReasoningLevelSelected
-            )
-        }
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (state.selectedModel.availableSpeedModes.isNotEmpty()) {
-                ComposerSpeedChip(
-                    speedMode = state.speedMode,
-                    availableModes = state.selectedModel.availableSpeedModes,
-                    onSpeedModeSelected = onSpeedModeSelected
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.weight(1f, fill = false)
+            ) {
+                // Model chip — opens the dynamic catalog popup
+                ComposerModelChip(
+                    selectedModelTitle = state.selectedModelTitle,
+                    onClick = {
+                        clearFocus()
+                        onModelPopupOpen()
+                    }
+                )
+                ComposerReasoningChip(
+                    selectedLevel = state.reasoningLevel,
+                    onLevelSelected = onReasoningLevelSelected
                 )
             }
-            ComposerContextUsageButton(
-                usage = state.contextUsage,
-                onClick = {
-                    clearFocus()
-                    onContextUsageTapped()
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                // SpeedMode is a cosmetic composer affordance only — not sent to the provider.
+                // Show speed chip whenever a model is selected.
+                val showSpeedChip = state.selectedModel != null
+                if (showSpeedChip) {
+                    ComposerSpeedChip(
+                        speedMode = state.speedMode,
+                        availableModes = ComposerSpeedMode.entries,
+                        onSpeedModeSelected = onSpeedModeSelected
+                    )
                 }
-            )
-        }
+                ComposerContextUsageButton(
+                    usage = state.contextUsage,
+                    onClick = {
+                        clearFocus()
+                        onContextUsageTapped()
+                    }
+                )
+            }
         }
 
         if (state.isContextUsagePresented) {
@@ -304,40 +323,35 @@ private fun ComposerContextRail(
                 ComposerContextUsagePopover(usage = state.contextUsage)
             }
         }
+
+        if (state.isModelPopupPresented) {
+            ComposerModelPopup(
+                state = state,
+                onSearchQueryChanged = onModelSearchQueryChanged,
+                onFilterFreeOnlyToggled = onModelFilterFreeOnlyToggled,
+                onModelSelected = onModelSelected,
+                onDismiss = onModelPopupDismiss
+            )
+        }
     }
 }
 
 @Composable
 private fun ComposerModelChip(
-    selectedModel: ComposerModelOption,
-    onModelSelected: (ComposerModelOption) -> Unit
+    selectedModelTitle: String,
+    onClick: () -> Unit
 ) {
-    var expanded by remember { mutableStateOf(false) }
-
-    Box {
-        ComposerMenuChip(
-            title = selectedModel.title,
-            leadingIcon = {
-                Icon(
-                    imageVector = Icons.Default.AutoAwesome,
-                    contentDescription = null,
-                    modifier = Modifier.size(14.dp)
-                )
-            },
-            onClick = { expanded = true }
-        )
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            ComposerModelOption.entries.forEach { model ->
-                DropdownMenuItem(
-                    text = { Text(model.title) },
-                    onClick = {
-                        expanded = false
-                        onModelSelected(model)
-                    }
-                )
-            }
-        }
-    }
+    ComposerMenuChip(
+        title = selectedModelTitle,
+        leadingIcon = {
+            Icon(
+                imageVector = Icons.Default.AutoAwesome,
+                contentDescription = null,
+                modifier = Modifier.size(14.dp)
+            )
+        },
+        onClick = onClick
+    )
 }
 
 @Composable

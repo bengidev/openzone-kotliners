@@ -3,9 +3,13 @@ package io.github.bengidev.openzone.settings.application
 import com.arkivanov.decompose.DefaultComponentContext
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import io.github.bengidev.openzone.settings.domain.ModelCatalog
+import io.github.bengidev.openzone.settings.infrastructure.FakeModelCatalogFetcher
 import io.github.bengidev.openzone.settings.infrastructure.InMemoryCredentialStore
+import io.github.bengidev.openzone.settings.infrastructure.InMemoryModelCatalogStore
 import io.github.bengidev.openzone.settings.infrastructure.InMemoryProviderPreferenceStore
 import io.github.bengidev.openzone.chat.infrastructure.ChatProviders
+import io.github.bengidev.openzone.shared.networking.CachedCatalog
+import io.github.bengidev.openzone.shared.networking.ChatModel
 import io.github.bengidev.openzone.shared.networking.ProviderPreference
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -23,7 +27,10 @@ class SettingsComponentTest {
     private fun component(
         credentialStore: InMemoryCredentialStore = InMemoryCredentialStore(),
         preferenceStore: InMemoryProviderPreferenceStore = InMemoryProviderPreferenceStore(),
-        scope: CoroutineScope
+        catalogStore: InMemoryModelCatalogStore = InMemoryModelCatalogStore(),
+        catalogFetcher: FakeModelCatalogFetcher? = null,
+        scope: CoroutineScope,
+        dispatcher: kotlinx.coroutines.CoroutineDispatcher = UnconfinedTestDispatcher()
     ): SettingsComponent {
         val lifecycle = LifecycleRegistry()
         return SettingsComponent(
@@ -31,6 +38,9 @@ class SettingsComponentTest {
             providers = ChatProviders.all,
             credentialStore = credentialStore,
             preferenceStore = preferenceStore,
+            catalogStore = catalogStore,
+            catalogFetcher = catalogFetcher,
+            ioDispatcher = dispatcher,
             mainScope = scope
         )
     }
@@ -53,16 +63,14 @@ class SettingsComponentTest {
         val credentials = InMemoryCredentialStore()
         val component = component(credentialStore = credentials, scope = scope)
 
-        component.onApiKeyDraftChanged("sk-secret-xyz")
+        component.onApiKeyDraftChanged("***")
         component.onSaveApiKey()
 
         val state = component.state.value
         assertTrue(state.hasApiKey)
-        // Draft cleared; secret value must not linger anywhere in state.
         assertEquals("", state.apiKeyDraft)
-        assertFalse(state.toString().contains("sk-secret-xyz"))
-        // Secret is persisted in the store, not state.
-        assertEquals("sk-secret-xyz", credentials.secretFor("openrouter"))
+        assertFalse(state.toString().contains("***"))
+        assertEquals("***", credentials.secretFor("openrouter"))
     }
 
     @Test
@@ -119,5 +127,70 @@ class SettingsComponentTest {
         component.onModelSelected("nonexistent/model")
 
         assertEquals(before, component.state.value.selectedModelId)
+    }
+
+    @Test
+    fun `live fetch updates models and caches result`() = runTest {
+        val scope = CoroutineScope(UnconfinedTestDispatcher(testScheduler))
+        val liveModels = listOf(
+            ChatModel(id = "test/model-a:free", displayName = "Model A",
+                providerId = "openrouter", isFree = true),
+            ChatModel(id = "test/model-b", displayName = "Model B",
+                providerId = "openrouter", isFree = false)
+        )
+        val fetcher = FakeModelCatalogFetcher(models = liveModels, shouldSucceed = true)
+        val catalogStore = InMemoryModelCatalogStore()
+        val credentials = InMemoryCredentialStore().apply { setSecret("openrouter", "sk-key") }
+        val component = component(
+            credentialStore = credentials,
+            catalogStore = catalogStore,
+            catalogFetcher = fetcher,
+            scope = scope
+        )
+
+        // Fetch should have fired (stale/absent cache + key present).
+        assertEquals(1, fetcher.fetchCount)
+        assertEquals(liveModels, component.state.value.models)
+        // Cache should be populated.
+        val cached = catalogStore.cachedCatalog("openrouter")
+        assertEquals(liveModels, cached?.models)
+    }
+
+    @Test
+    fun `skips live fetch when cache is fresh`() = runTest {
+        val scope = CoroutineScope(UnconfinedTestDispatcher(testScheduler))
+        val now = System.currentTimeMillis()
+        val cachedModels = ModelCatalog.openRouterFree
+        val freshCache = InMemoryModelCatalogStore(
+            mapOf("openrouter" to CachedCatalog(models = cachedModels, fetchedAtEpochMs = now))
+        )
+        val fetcher = FakeModelCatalogFetcher(shouldSucceed = true)
+        val credentials = InMemoryCredentialStore().apply { setSecret("openrouter", "sk-key") }
+
+        component(
+            credentialStore = credentials,
+            catalogStore = freshCache,
+            catalogFetcher = fetcher,
+            scope = scope
+        )
+
+        // Cache is fresh — no network call.
+        assertEquals(0, fetcher.fetchCount)
+    }
+
+    @Test
+    fun `falls back to curated list when fetch fails`() = runTest {
+        val scope = CoroutineScope(UnconfinedTestDispatcher(testScheduler))
+        val fetcher = FakeModelCatalogFetcher(shouldSucceed = false)
+        val credentials = InMemoryCredentialStore().apply { setSecret("openrouter", "sk-key") }
+        val component = component(
+            credentialStore = credentials,
+            catalogFetcher = fetcher,
+            scope = scope
+        )
+
+        // Fetch was attempted but failed; curated fallback is shown.
+        assertEquals(1, fetcher.fetchCount)
+        assertEquals(ModelCatalog.openRouterFree, component.state.value.models)
     }
 }

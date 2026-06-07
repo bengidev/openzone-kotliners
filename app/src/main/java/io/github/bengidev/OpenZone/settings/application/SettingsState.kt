@@ -1,29 +1,31 @@
 package io.github.bengidev.openzone.settings.application
 
-import io.github.bengidev.openzone.settings.domain.CatalogModel
+import io.github.bengidev.openzone.shared.networking.ChatModel
 import io.github.bengidev.openzone.shared.networking.ChatProvider
 
 /**
- * UI state for the Settings surface. Holds no secret value — only whether a key
- * is present ([hasApiKey]) and the in-progress [apiKeyDraft] the user is typing.
- * The actual stored secret never enters state and is never rendered back.
+ * UI state for the Settings surface. Holds no secret value — only whether a
+ * key is present ([hasApiKey]) and the in-progress [apiKeyDraft] the user is
+ * typing. The actual stored secret never enters state and is never rendered back.
  *
  * @property providers selectable providers (OpenRouter-first).
  * @property selectedProviderId currently selected provider id.
- * @property models curated catalog models for the selected provider.
+ * @property models catalog models for the selected provider (live or curated fallback).
  * @property selectedModelId currently selected model id, or `null` if unset.
  * @property apiKeyDraft transient text-field contents for key entry.
  * @property hasApiKey whether a key is currently stored for the selected provider.
  * @property isLoaded whether initial persisted state has been read.
+ * @property isLoadingModels whether a live catalog fetch is in progress.
  */
 data class SettingsState(
     val providers: List<ChatProvider> = emptyList(),
     val selectedProviderId: String? = null,
-    val models: List<CatalogModel> = emptyList(),
+    val models: List<ChatModel> = emptyList(),
     val selectedModelId: String? = null,
     val apiKeyDraft: String = "",
     val hasApiKey: Boolean = false,
-    val isLoaded: Boolean = false
+    val isLoaded: Boolean = false,
+    val isLoadingModels: Boolean = false
 ) {
     /** The selected provider descriptor, if resolvable. */
     val selectedProvider: ChatProvider?

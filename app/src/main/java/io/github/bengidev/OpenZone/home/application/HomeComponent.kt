@@ -8,10 +8,14 @@ import io.github.bengidev.openzone.chat.application.ChatComponent
 import io.github.bengidev.openzone.chat.application.ChatState
 import io.github.bengidev.openzone.chat.infrastructure.ChatAPIClient
 import io.github.bengidev.openzone.chat.infrastructure.ChatMockStreamingClient
+import io.github.bengidev.openzone.chat.infrastructure.ChatProviders
 import io.github.bengidev.openzone.home.domain.ComposerContextUsage
 import io.github.bengidev.openzone.home.domain.ComposerModelOption
 import io.github.bengidev.openzone.home.domain.ComposerReasoningLevel
 import io.github.bengidev.openzone.home.domain.ComposerSpeedMode
+import io.github.bengidev.openzone.settings.application.SettingsComponent
+import io.github.bengidev.openzone.shared.networking.MutableCredentialStore
+import io.github.bengidev.openzone.shared.networking.ProviderPreferenceStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -24,6 +28,8 @@ import kotlinx.coroutines.SupervisorJob
 class HomeComponent(
     componentContext: ComponentContext,
     private val apiClient: ChatAPIClient = ChatMockStreamingClient.defaultClient(),
+    private val credentialStore: MutableCredentialStore? = null,
+    private val preferenceStore: ProviderPreferenceStore? = null,
     private val onSidebarToggle: () -> Unit = {}
 ) : ComponentContext by componentContext {
 
@@ -36,6 +42,35 @@ class HomeComponent(
         apiClient = apiClient,
         scope = chatScope
     )
+
+    /**
+     * Settings is a child feature, owned by Home (same composition pattern as
+     * [chatComponent]). Built only when both stores are wired from the app
+     * entrypoint; in mock/preview wiring it stays null and the settings entry
+     * is a no-op. Communication is via the shared store interfaces only — no
+     * cross-feature presenter imports.
+     */
+    val settingsComponent: SettingsComponent? =
+        if (credentialStore != null && preferenceStore != null) {
+            SettingsComponent(
+                componentContext = this,
+                providers = ChatProviders.all,
+                credentialStore = credentialStore,
+                preferenceStore = preferenceStore,
+                onClose = { _state.update { it.copy(isSettingsPresented = false) } }
+            )
+        } else {
+            null
+        }
+
+    fun onSettingsTapped() {
+        if (settingsComponent == null) return
+        _state.update { it.copy(isSettingsPresented = true) }
+    }
+
+    fun onSettingsDismissed() {
+        _state.update { it.copy(isSettingsPresented = false) }
+    }
 
     fun onSidebarToggleTapped() {
         onSidebarToggle()

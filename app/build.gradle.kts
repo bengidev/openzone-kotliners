@@ -52,6 +52,9 @@ dependencies {
     // Onboarding persistence
     implementation(libs.androidx.datastore.preferences)
 
+    // Settings — encrypted credential storage (EncryptedSharedPreferences)
+    implementation(libs.androidx.security.crypto)
+
     // Networking + serialization (chat provider integration)
     implementation(libs.okhttp)
     implementation(libs.kotlinx.serialization.json)

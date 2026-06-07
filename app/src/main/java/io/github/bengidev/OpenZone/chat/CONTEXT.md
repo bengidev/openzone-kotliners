@@ -8,7 +8,7 @@ Streaming chat thread feature. Mirrors iOS `Features/Chat` (TCA reducer `ChatFea
 io.github.bengidev.openzone.chat/
 ├── domain/          # Models only — no Android, no Compose
 ├── application/     # ChatState + ChatComponent (reducer)
-├── infrastructure/  # ChatAPIClient + ChatMockStreamingClient + ChatMockReplyProvider
+├── infrastructure/  # ChatAPIClient + OpenAiCompatibleStreamingClient (live) + SSE/wire models
 ├── presenter/       # Compose UI: ChatThreadView, ChatMessageRowView, ChatReasoningCardView
 └── theme/           # ChatPalette + ChatTypography + OpenZoneChatTheme
 ```

@@ -7,18 +7,23 @@ import com.arkivanov.decompose.value.update
 import io.github.bengidev.openzone.chat.application.ChatComponent
 import io.github.bengidev.openzone.chat.application.ChatState
 import io.github.bengidev.openzone.chat.infrastructure.ChatAPIClient
-import io.github.bengidev.openzone.chat.infrastructure.ChatMockStreamingClient
+import io.github.bengidev.openzone.chat.infrastructure.OpenAiCompatibleStreamingClient
 import io.github.bengidev.openzone.chat.infrastructure.ChatProviders
 import io.github.bengidev.openzone.home.domain.ComposerContextUsage
 import io.github.bengidev.openzone.home.domain.ComposerModelOption
 import io.github.bengidev.openzone.home.domain.ComposerReasoningLevel
 import io.github.bengidev.openzone.home.domain.ComposerSpeedMode
 import io.github.bengidev.openzone.settings.application.SettingsComponent
+import io.github.bengidev.openzone.shared.networking.ChatProvider
+import io.github.bengidev.openzone.shared.networking.CredentialStore
 import io.github.bengidev.openzone.shared.networking.MutableCredentialStore
+import io.github.bengidev.openzone.shared.networking.ProviderPreference
 import io.github.bengidev.openzone.shared.networking.ProviderPreferenceStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 
 /**
  * Decompose component for the home welcome + composer shell.
@@ -27,9 +32,10 @@ import kotlinx.coroutines.SupervisorJob
  */
 class HomeComponent(
     componentContext: ComponentContext,
-    private val apiClient: ChatAPIClient = ChatMockStreamingClient.defaultClient(),
     private val credentialStore: MutableCredentialStore? = null,
     private val preferenceStore: ProviderPreferenceStore? = null,
+    apiClient: ChatAPIClient? = null,
+    private val providers: List<ChatProvider> = ChatProviders.all,
     private val onSidebarToggle: () -> Unit = {}
 ) : ComponentContext by componentContext {
 
@@ -38,10 +44,55 @@ class HomeComponent(
 
     // Chat is a child feature, owned by Home (mirrors iOS `HomeFeature` scoping `ChatFeature`).
     private val chatScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    /**
+     * The live OpenAI-compatible streaming client is the default injected
+     * dependency. It resolves the API secret from [credentialStore] at call
+     * time and the target provider from each request. A caller may inject a
+     * different [ChatAPIClient] (e.g. a canned stub) for tests/previews.
+     */
+    private val resolvedApiClient: ChatAPIClient =
+        apiClient ?: credentialStore?.let { OpenAiCompatibleStreamingClient(credentialStore = it) }
+            ?: OpenAiCompatibleStreamingClient(credentialStore = EmptyCredentialStore)
+
+    /** Latest persisted provider/model selection; refreshed from the store. */
+    @Volatile
+    private var preference: ProviderPreference? = null
+
     val chatComponent: ChatComponent = ChatComponent(
-        apiClient = apiClient,
-        scope = chatScope
+        apiClient = resolvedApiClient,
+        scope = chatScope,
+        resolveProvider = { resolveProvider() },
+        resolveModelId = { preference?.modelId },
+        canStartSend = { isChatConfigured() }
     )
+
+    init {
+        // Mirror the persisted provider/model selection into local state and
+        // derive the send gate (stored credential + selected model). Reactive so
+        // a key/model set in Settings re-enables send without an app restart.
+        preferenceStore?.preferenceFlow
+            ?.onEach { pref ->
+                preference = pref
+                _state.update { it.copy(isChatConfigured = isChatConfigured()) }
+            }
+            ?.launchIn(chatScope)
+    }
+
+    /** Resolve the active provider descriptor from the persisted selection. */
+    private fun resolveProvider(): ChatProvider {
+        val id = preference?.providerId
+        return providers.firstOrNull { it.id == id }
+            ?: providers.firstOrNull()
+            ?: ChatProviders.openRouter
+    }
+
+    /** A send is allowed only with a stored credential and a selected model. */
+    private fun isChatConfigured(): Boolean {
+        val pref = preference ?: return false
+        if (pref.modelId.isNullOrBlank()) return false
+        return credentialStore?.hasSecret(pref.providerId) == true
+    }
 
     /**
      * Settings is a child feature, owned by Home (same composition pattern as
@@ -136,4 +187,14 @@ class HomeComponent(
 
     /** Exposed for `HomeScreen` to inspect chat-thread presence. */
     fun chatState(): ChatState = chatComponent.state.value
+}
+
+/**
+ * No-op [CredentialStore] used only when [HomeComponent] is built without a
+ * real credential store (mock/preview wiring). It never returns a secret, so
+ * the live client short-circuits with a "no API key" error rather than making
+ * a network call — keeping previews network-free.
+ */
+private object EmptyCredentialStore : CredentialStore {
+    override fun secretFor(providerId: String): String? = null
 }

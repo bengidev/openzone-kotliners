@@ -37,16 +37,19 @@ import kotlin.coroutines.coroutineContext
  *
  * Secrets are read from [credentialStore] at call time (never captured at
  * construction), so a key entered after the client is built is honored on the
- * next request. Mirrors the iOS OpenAI-compatible client.
+ * next request. The target provider is read from each [ChatRequest.provider],
+ * making a single instance provider-agnostic. Mirrors the iOS OpenAI-compatible
+ * client.
  */
 class OpenAiCompatibleStreamingClient(
-    private val provider: ChatProvider,
     private val credentialStore: CredentialStore,
     private val callFactory: Call.Factory = OkHttpClient(),
     private val json: Json = defaultJson
 ) : ChatAPIClient {
 
     override fun stream(request: ChatRequest): Flow<ChatStreamingEvent> = flow {
+        val provider = request.provider
+
         // Resolve credential at call time.
         val secret = credentialStore.secretFor(provider.id)
         if (provider.authScheme is AuthScheme.Bearer && secret.isNullOrBlank()) {
@@ -123,6 +126,7 @@ class OpenAiCompatibleStreamingClient(
     }
 
     private fun buildRequest(request: ChatRequest, secret: String?): Request {
+        val provider = request.provider
         val payload = ChatCompletionRequest(
             model = request.modelId,
             messages = request.messages.toWireMessages(),

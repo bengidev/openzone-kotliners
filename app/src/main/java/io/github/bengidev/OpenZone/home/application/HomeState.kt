@@ -16,8 +16,14 @@ data class HomeState(
         tokenLimit = 258_000
     ),
     val isContextUsagePresented: Boolean = false,
-    val isSettingsPresented: Boolean = false
+    val isSettingsPresented: Boolean = false,
+    /**
+     * Whether the chat path is ready to send: a credential is stored for the
+     * selected provider and a model has been chosen (both via Settings).
+     * Derived by [HomeComponent] from the credential + preference stores.
+     */
+    val isChatConfigured: Boolean = false
 ) {
     val canSend: Boolean
-        get() = draftMessage.trim().isNotEmpty() && !isSending
+        get() = draftMessage.trim().isNotEmpty() && !isSending && isChatConfigured
 }

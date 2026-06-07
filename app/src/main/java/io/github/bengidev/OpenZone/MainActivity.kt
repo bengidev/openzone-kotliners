@@ -16,6 +16,8 @@ import io.github.bengidev.openzone.home.application.HomeComponent
 import io.github.bengidev.openzone.onboarding.OnboardingScreen
 import io.github.bengidev.openzone.onboarding.application.OnboardingComponent
 import io.github.bengidev.openzone.onboarding.infrastructure.DataStoreOnboardingRepository
+import io.github.bengidev.openzone.settings.infrastructure.DataStoreProviderPreferenceStore
+import io.github.bengidev.openzone.settings.infrastructure.EncryptedCredentialStore
 import io.github.bengidev.openzone.ui.theme.AppTheme
 import io.github.bengidev.openzone.ui.theme.LocalAppTheme
 import io.github.bengidev.openzone.ui.theme.OpenZoneTheme
@@ -39,6 +41,8 @@ class MainActivity : ComponentActivity() {
 
         val homeComponent = HomeComponent(
             componentContext = componentContext,
+            credentialStore = EncryptedCredentialStore(applicationContext),
+            preferenceStore = DataStoreProviderPreferenceStore(applicationContext),
             onSidebarToggle = { /* SideStory overlay — future */ }
         )
 

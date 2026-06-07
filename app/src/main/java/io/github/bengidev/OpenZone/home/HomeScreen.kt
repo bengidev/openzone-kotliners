@@ -25,6 +25,7 @@ import io.github.bengidev.openzone.home.presenter.HomeWelcomeView
 import io.github.bengidev.openzone.home.presenter.clearFocusOnTapOutside
 import io.github.bengidev.openzone.home.theme.HomeTheme
 import io.github.bengidev.openzone.home.theme.OpenZoneHomeTheme
+import io.github.bengidev.openzone.settings.SettingsScreen
 
 /**
  * Home shell — iOS `MainChat` welcome layout. Swaps between welcome
@@ -54,7 +55,10 @@ fun HomeScreen(
                         .navigationBarsPadding(),
                     containerColor = HomeTheme.palette.background,
                     topBar = {
-                        HomeTopBar(onSidebarToggle = component::onSidebarToggleTapped)
+                        HomeTopBar(
+                            onSidebarToggle = component::onSidebarToggleTapped,
+                            onSettingsTapped = component::onSettingsTapped
+                        )
                     },
                     bottomBar = {
                         Box(
@@ -104,6 +108,15 @@ fun HomeScreen(
                             )
                         }
                     }
+                }
+
+                val settingsComponent = component.settingsComponent
+                if (state.isSettingsPresented && settingsComponent != null) {
+                    SettingsScreen(
+                        component = settingsComponent,
+                        darkTheme = darkTheme,
+                        modifier = Modifier.fillMaxSize()
+                    )
                 }
             }
         }

@@ -15,7 +15,8 @@ data class HomeState(
         usedTokens = 107_000,
         tokenLimit = 258_000
     ),
-    val isContextUsagePresented: Boolean = false
+    val isContextUsagePresented: Boolean = false,
+    val isSettingsPresented: Boolean = false
 ) {
     val canSend: Boolean
         get() = draftMessage.trim().isNotEmpty() && !isSending

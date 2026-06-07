@@ -8,6 +8,8 @@ import io.github.bengidev.openzone.chat.domain.ChatStreamingEvent
 import io.github.bengidev.openzone.chat.domain.ChatStreamingStatus
 import io.github.bengidev.openzone.chat.domain.ChatMessages
 import io.github.bengidev.openzone.chat.infrastructure.ChatAPIClient
+import io.github.bengidev.openzone.chat.infrastructure.ChatProviders
+import io.github.bengidev.openzone.shared.networking.ChatProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,11 +31,19 @@ import java.util.UUID
  * Mirrors iOS `ChatFeature` (TCA reducer). Follows the Android Onboarding
  * pattern (`OnboardingComponent`) of explicit `send()` / `state` API rather
  * than deep TCA-style stores.
+ *
+ * The provider+model that a send targets are resolved lazily via
+ * [resolveProvider] / [resolveModelId] (filled from the preference store by the
+ * owner) so this component stays free of persistence and Android dependencies
+ * and remains unit-testable with a canned [ChatAPIClient]. A send is hard-blocked
+ * unless [canStartSend] reports a stored credential and a selected model.
  */
 class ChatComponent(
     private val apiClient: ChatAPIClient,
     private val scope: CoroutineScope,
-    private val modelId: String = "openzone-dummy-1",
+    private val resolveProvider: () -> ChatProvider = { ChatProviders.openRouter },
+    private val resolveModelId: () -> String? = { null },
+    private val canStartSend: () -> Boolean = { true },
     initialState: ChatState = ChatState()
 ) {
 
@@ -52,6 +62,13 @@ class ChatComponent(
         val snapshot = _state.value
         val draft = snapshot.draft.trim()
         if (draft.isEmpty() || snapshot.isStreaming) return
+
+        // Hard-block: require a stored credential and a selected model before
+        // a send can start. The owner derives this from the credential +
+        // preference stores; without it the send path is a no-op.
+        val modelId = resolveModelId()
+        if (!canStartSend() || modelId.isNullOrBlank()) return
+        val provider = resolveProvider()
 
         val userMessage = ChatMessages.text(
             id = newMessageId("user"),
@@ -83,7 +100,8 @@ class ChatComponent(
         val request = ChatRequest(
             conversationId = snapshot.conversation.id,
             messages = _state.value.messages,
-            modelId = modelId
+            modelId = modelId,
+            provider = provider
         )
         beginStream(request, thinkingMessage.id, assistantMessage.id)
     }

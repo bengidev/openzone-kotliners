@@ -37,10 +37,11 @@ class OpenAiCompatibleStreamingClientTest {
         server.shutdown()
     }
 
+    private fun provider() =
+        ChatProviders.openRouter.copy(baseUrl = server.url("/v1").toString())
+
     private fun client(secret: String? = "sk-test"): OpenAiCompatibleStreamingClient {
-        val provider = ChatProviders.openRouter.copy(baseUrl = server.url("/v1").toString())
         return OpenAiCompatibleStreamingClient(
-            provider = provider,
             credentialStore = FakeCredentialStore(secret)
         )
     }
@@ -48,7 +49,8 @@ class OpenAiCompatibleStreamingClientTest {
     private fun request() = ChatRequest(
         conversationId = "c1",
         messages = listOf(ChatMessages.text("m1", ChatMessageRole.USER, "Hi")),
-        modelId = "deepseek/deepseek-r1:free"
+        modelId = "deepseek/deepseek-r1:free",
+        provider = provider()
     )
 
     private fun sse(body: String) = MockResponse()

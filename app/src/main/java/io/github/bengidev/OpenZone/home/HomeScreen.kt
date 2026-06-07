@@ -100,6 +100,8 @@ fun HomeScreen(
                             )
                         } else {
                             HomeWelcomeView(
+                                isChatConfigured = state.isChatConfigured,
+                                onConfigureTapped = component::onSettingsTapped,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .fillMaxHeight()

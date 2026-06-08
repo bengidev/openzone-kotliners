@@ -20,6 +20,7 @@ import io.github.bengidev.openzone.chat.presenter.ChatThreadView
 import io.github.bengidev.openzone.chat.theme.OpenZoneChatTheme
 import io.github.bengidev.openzone.home.application.HomeComponent
 import io.github.bengidev.openzone.home.presenter.HomeComposerView
+import io.github.bengidev.openzone.home.presenter.HomeSidebarView
 import io.github.bengidev.openzone.home.presenter.HomeTopBar
 import io.github.bengidev.openzone.home.presenter.HomeWelcomeView
 import io.github.bengidev.openzone.home.presenter.clearFocusOnTapOutside
@@ -121,6 +122,15 @@ fun HomeScreen(
                     SettingsScreen(
                         component = settingsComponent,
                         darkTheme = darkTheme,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+
+                if (state.isSidebarPresented) {
+                    HomeSidebarView(
+                        conversations = state.conversations,
+                        onConversationSelected = component::onConversationSelected,
+                        onDismiss = component::onSidebarDismissed,
                         modifier = Modifier.fillMaxSize()
                     )
                 }

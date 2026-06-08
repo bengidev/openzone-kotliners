@@ -77,6 +77,32 @@ class ChatComponent(
         }
     }
 
+    /**
+     * Reopens a persisted [conversation] (issue #8 sidebar): cancels any in-flight
+     * stream, switches the active conversation so continued sends persist into it,
+     * and replaces the thread with that conversation's stored messages. A no-op
+     * when no store is wired. Selecting the already-active conversation still
+     * re-loads it, which is harmless (idempotent overwrite of identical state).
+     */
+    fun openConversation(conversation: io.github.bengidev.openzone.chat.domain.ChatConversation) {
+        val store = historyStore ?: return
+        streamJob?.cancel()
+        streamJob = null
+        scope.launch {
+            val restored = store.loadMessages(conversation.id)
+            _state.update { state ->
+                state.copy(
+                    conversation = conversation,
+                    messages = restored,
+                    draft = "",
+                    canSend = false,
+                    status = ChatStreamingStatus.IDLE,
+                    isReasoningExpanded = false
+                )
+            }
+        }
+    }
+
     // ---- Intents (mirroring iOS ChatFeature.Action) ---------------------
 
     fun onDraftChanged(text: String) {

@@ -1,5 +1,6 @@
 package io.github.bengidev.openzone.home.application
 
+import io.github.bengidev.openzone.chat.domain.ChatConversation
 import io.github.bengidev.openzone.home.domain.ComposerContextUsage
 import io.github.bengidev.openzone.home.domain.ComposerReasoningLevel
 import io.github.bengidev.openzone.home.domain.ComposerSpeedMode
@@ -40,6 +41,13 @@ data class HomeState(
     val debouncedModelQuery: String = "",
     val modelFilterFreeOnly: Boolean = false,
     val isSettingsPresented: Boolean = false,
+    /**
+     * Whether the sidebar conversation-history drawer is open (issue #8).
+     * Settings remains a separate top-bar sheet and is never relocated here.
+     */
+    val isSidebarPresented: Boolean = false,
+    /** Persisted conversations shown in the sidebar, most-recent first. */
+    val conversations: List<ChatConversation> = emptyList(),
     /**
      * Whether the chat path is ready to send: a credential is stored for the
      * selected provider and a model has been chosen (both via Settings).

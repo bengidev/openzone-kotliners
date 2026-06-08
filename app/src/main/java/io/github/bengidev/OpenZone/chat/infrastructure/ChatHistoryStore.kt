@@ -38,4 +38,11 @@ interface ChatHistoryStore {
      * Returns an empty list when the conversation has no stored history.
      */
     suspend fun loadMessages(conversationId: String): List<ChatMessage>
+
+    /**
+     * Lists all persisted conversations, most-recently-updated first. Returns an
+     * empty list when no conversation has been persisted yet. Backs the sidebar
+     * conversation list (issue #8).
+     */
+    suspend fun listConversations(): List<ChatConversation>
 }

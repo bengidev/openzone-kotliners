@@ -53,7 +53,13 @@ data class HomeState(
      * selected provider and a model has been chosen (both via Settings).
      * Derived by [HomeComponent] from the credential + preference stores.
      */
-    val isChatConfigured: Boolean = false
+    val isChatConfigured: Boolean = false,
+    /**
+     * Whether an API key is stored for the selected provider, independent of
+     * model selection. Drives the composer's "Add an API key" hint. Mirrors
+     * iOS `HomeFeature` `hasAPIKey`.
+     */
+    val hasApiKey: Boolean = false
 ) {
     val canSend: Boolean
         get() = draftMessage.trim().isNotEmpty() && !isSending && isChatConfigured

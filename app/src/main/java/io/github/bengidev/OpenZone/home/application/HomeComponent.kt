@@ -6,6 +6,7 @@ import com.arkivanov.decompose.value.Value
 import com.arkivanov.decompose.value.update
 import io.github.bengidev.openzone.chat.application.ChatComponent
 import io.github.bengidev.openzone.chat.application.ChatState
+import io.github.bengidev.openzone.chat.domain.ChatConversation
 import io.github.bengidev.openzone.chat.infrastructure.ChatAPIClient
 import io.github.bengidev.openzone.chat.infrastructure.ChatHistoryStore
 import io.github.bengidev.openzone.chat.infrastructure.ChatProviders
@@ -95,7 +96,8 @@ class HomeComponent(
                         availableModels = models,
                         selectedModelId = modelId,
                         reasoningLevel = pref?.reasoningLevel ?: ComposerReasoningLevel.Off,
-                        isChatConfigured = isChatConfigured()
+                        isChatConfigured = isChatConfigured(),
+                        hasApiKey = hasApiKey()
                     )
                 }
             }
@@ -117,6 +119,12 @@ class HomeComponent(
     private fun isChatConfigured(): Boolean {
         val pref = preference ?: return false
         if (pref.modelId.isNullOrBlank()) return false
+        return credentialStore?.hasSecret(pref.providerId) == true
+    }
+
+    /** Whether a credential exists for the selected provider (model-agnostic). */
+    private fun hasApiKey(): Boolean {
+        val pref = preference ?: return false
         return credentialStore?.hasSecret(pref.providerId) == true
     }
 

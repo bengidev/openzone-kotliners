@@ -72,6 +72,7 @@ fun HomeScreen(
                                 onSendTapped = component::onSendTapped,
                                 onAttachmentTapped = component::onAttachmentTapped,
                                 onMicrophoneTapped = component::onMicrophoneTapped,
+                                onConfigureApiKeyTapped = component::onSettingsTapped,
                                 onModelPopupOpen = component::onModelPopupOpen,
                                 onModelPopupDismiss = component::onModelPopupDismiss,
                                 onModelSearchQueryChanged = component::onModelSearchQueryChanged,

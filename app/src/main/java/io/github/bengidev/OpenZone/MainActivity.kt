@@ -9,8 +9,11 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.room.Room
 import com.arkivanov.decompose.DefaultComponentContext
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
+import io.github.bengidev.openzone.chat.infrastructure.RoomChatHistoryStore
+import io.github.bengidev.openzone.chat.infrastructure.persistence.ChatDatabase
 import io.github.bengidev.openzone.home.HomeScreen
 import io.github.bengidev.openzone.home.application.HomeComponent
 import io.github.bengidev.openzone.onboarding.OnboardingScreen
@@ -35,6 +38,13 @@ class MainActivity : ComponentActivity() {
 
         val componentContext = DefaultComponentContext(lifecycle = lifecycleRegistry)
 
+        val chatDatabase = Room.databaseBuilder(
+            applicationContext,
+            ChatDatabase::class.java,
+            ChatDatabase.DATABASE_NAME
+        ).build()
+        val chatHistoryStore = RoomChatHistoryStore(chatDatabase.chatHistoryDao())
+
         val onboardingComponent = OnboardingComponent(
             componentContext = componentContext,
             repository = DataStoreOnboardingRepository(this),
@@ -47,6 +57,7 @@ class MainActivity : ComponentActivity() {
             preferenceStore = DataStoreProviderPreferenceStore(applicationContext),
             catalogStore = DataStoreModelCatalogStore(applicationContext),
             catalogFetcher = OpenRouterModelFetcher(),
+            historyStore = chatHistoryStore,
             onSidebarToggle = { /* SideStory overlay — future */ }
         )
 

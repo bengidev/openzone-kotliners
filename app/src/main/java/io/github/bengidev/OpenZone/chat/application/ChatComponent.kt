@@ -8,6 +8,7 @@ import io.github.bengidev.openzone.chat.domain.ChatStreamingEvent
 import io.github.bengidev.openzone.chat.domain.ChatStreamingStatus
 import io.github.bengidev.openzone.chat.domain.ChatMessages
 import io.github.bengidev.openzone.chat.infrastructure.ChatAPIClient
+import io.github.bengidev.openzone.chat.infrastructure.ChatHistoryStore
 import io.github.bengidev.openzone.chat.infrastructure.ChatProviders
 import io.github.bengidev.openzone.home.domain.ComposerReasoningLevel
 import io.github.bengidev.openzone.shared.networking.ChatProvider
@@ -46,6 +47,7 @@ class ChatComponent(
     private val resolveModelId: () -> String? = { null },
     private val resolveReasoningLevel: () -> ComposerReasoningLevel = { ComposerReasoningLevel.Off },
     private val canStartSend: () -> Boolean = { true },
+    private val historyStore: ChatHistoryStore? = null,
     initialState: ChatState = ChatState()
 ) {
 
@@ -53,6 +55,27 @@ class ChatComponent(
     val state: StateFlow<ChatState> = _state.asStateFlow()
 
     private var streamJob: Job? = null
+
+    // ---- History restore ------------------------------------------------
+
+    /**
+     * Restores the active conversation's persisted messages from
+     * [historyStore], replacing the current (empty) message list. Safe to call
+     * once at startup; a no-op when no store is wired or no history exists.
+     * Never clobbers an in-flight stream.
+     */
+    fun restoreHistory() {
+        val store = historyStore ?: return
+        scope.launch {
+            val conversationId = _state.value.conversation.id
+            val restored = store.loadMessages(conversationId)
+            if (restored.isEmpty()) return@launch
+            _state.update { state ->
+                if (state.isStreaming || state.messages.isNotEmpty()) state
+                else state.copy(messages = restored)
+            }
+        }
+    }
 
     // ---- Intents (mirroring iOS ChatFeature.Action) ---------------------
 
@@ -98,6 +121,11 @@ class ChatComponent(
                 messages = it.messages + listOf(userMessage, thinkingMessage, assistantMessage)
             )
         }
+
+        // Turn-boundary write #1: persist the user message immediately on send.
+        // An errored or killed turn therefore loses only in-flight assistant
+        // text, never the user's message.
+        persist(snapshot.conversation, userMessage)
 
         val request = ChatRequest(
             conversationId = snapshot.conversation.id,
@@ -176,6 +204,9 @@ class ChatComponent(
                         messages = state.messages.markAssistantTurnsComplete()
                     )
                 }
+                // Turn-boundary write #2: persist the completed assistant text
+                // once, after the stream finishes. No per-delta writes.
+                persistCompletedAssistant(assistantId)
                 streamJob = null
             }
             is ChatStreamingEvent.Error -> {
@@ -195,6 +226,32 @@ class ChatComponent(
     // ---- Helpers -------------------------------------------------------
 
     private fun newMessageId(prefix: String): String = "$prefix-${UUID.randomUUID()}"
+
+    /** Persists a single message at a turn boundary (fire-and-forget on [scope]). */
+    private fun persist(
+        conversation: io.github.bengidev.openzone.chat.domain.ChatConversation,
+        message: ChatMessage
+    ) {
+        val store = historyStore ?: return
+        scope.launch {
+            store.upsertConversation(conversation)
+            store.upsertMessage(conversation.id, message)
+        }
+    }
+
+    /**
+     * Persists the completed assistant text row identified by [assistantId] once,
+     * on stream completion. Looks the row up from current state so the stored
+     * copy carries the fully-streamed content and `isComplete = true`.
+     */
+    private fun persistCompletedAssistant(assistantId: String) {
+        if (historyStore == null) return
+        val state = _state.value
+        val assistant = state.messages.firstOrNull {
+            it is ChatMessage.Text && it.id == assistantId
+        } ?: return
+        persist(state.conversation, assistant)
+    }
 
     /** Appends `delta` to a text message matching `id` (user or assistant). */
     private fun List<ChatMessage>.appendTextDelta(id: String, delta: String): List<ChatMessage> =

@@ -40,7 +40,10 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import io.github.bengidev.openzone.chat.domain.ChatThinkingMessage
 import io.github.bengidev.openzone.chat.theme.ChatTheme
@@ -101,22 +104,15 @@ fun ChatReasoningCardView(
                     HorizontalDivider(color = palette.reasoningBorder.copy(alpha = 0.4f))
                     Spacer(modifier = Modifier.height(8.dp))
                 }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.Bottom
-                ) {
-                    Text(
-                        text = content.ifEmpty { if (isStreaming) "…" else "" },
-                        style = typography.reasoningBody,
-                        color = palette.reasoningText,
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth()
-                    )
-                    if (isStreaming) {
-                        StreamingCursor(color = palette.streamingDot)
-                    }
-                }
+                StreamingReasoningText(
+                    // No "…" placeholder — the blinking caret alone signals
+                    // streaming. The placeholder visually competed with the
+                    // pulse dot in the header and read as a stacked indicator.
+                    content = content,
+                    isStreaming = isStreaming,
+                    textColor = palette.reasoningText,
+                    cursorColor = palette.streamingDot
+                )
             }
         }
     }
@@ -196,21 +192,45 @@ private fun ReasoningPulseDot(color: Color) {
 }
 
 @Composable
-private fun StreamingCursor(color: Color) {
-    val transition = rememberInfiniteTransition(label = "reasoning-cursor")
-    val alpha by transition.animateFloat(
-        initialValue = 0.25f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(550, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "cursor-opacity"
-    )
+private fun StreamingReasoningText(
+    content: String,
+    isStreaming: Boolean,
+    textColor: Color,
+    cursorColor: Color
+) {
+    val typography = LocalChatTypography.current
+
+    val cursorAlpha by if (isStreaming) {
+        val transition = rememberInfiniteTransition(label = "reasoning-cursor")
+        transition.animateFloat(
+            initialValue = 0.25f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(550, easing = LinearEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "cursor-opacity"
+        )
+    } else {
+        remember { mutableStateOf(0f) }
+    }
+
+    // Render the body text and the blinking caret as a single inline string so
+    // the caret always trails the last character (and wraps with it) instead of
+    // being pushed to the far edge of the row. Mirrors iOS lastTextBaseline HStack.
+    val text = buildAnnotatedString {
+        append(content)
+        if (isStreaming) {
+            withStyle(SpanStyle(color = cursorColor.copy(alpha = cursorAlpha))) {
+                append("▍")
+            }
+        }
+    }
+
     Text(
-        text = "▍",
-        style = LocalChatTypography.current.reasoningBody,
-        color = color,
-        modifier = Modifier.alpha(alpha)
+        text = text,
+        style = typography.reasoningBody,
+        color = textColor,
+        modifier = Modifier.fillMaxWidth()
     )
 }

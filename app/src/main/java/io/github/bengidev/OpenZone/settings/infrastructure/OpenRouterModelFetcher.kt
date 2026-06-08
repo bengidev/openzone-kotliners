@@ -52,14 +52,14 @@ class OpenRouterModelFetcher(
             isFree = free,
             contextLength = contextLength,
             supportsReasoning = reasoning,
-            description = description.orEmpty().truncateForHint()
+            description = description.orEmpty().normalizeDescription()
         )
     }
 
-    private fun String.truncateForHint(): String {
-        val clean = trim().replace('\n', ' ')
-        return if (clean.length > HINT_MAX) clean.take(HINT_MAX).trimEnd() + "…" else clean
-    }
+    /** Collapses newlines/whitespace into single spaces; no length cap so the
+     *  picker can render the model's full description and wrap it dynamically. */
+    private fun String.normalizeDescription(): String =
+        trim().replace(Regex("\\s+"), " ")
 
     // ---- Wire models -------------------------------------------------------
 
@@ -82,7 +82,6 @@ class OpenRouterModelFetcher(
     private companion object {
         const val PROVIDER_ID = "openrouter"
         const val MODELS_URL = "https://openrouter.ai/api/v1/models"
-        const val HINT_MAX = 120
 
         val defaultJson = Json {
             ignoreUnknownKeys = true

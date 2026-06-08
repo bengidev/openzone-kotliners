@@ -56,8 +56,8 @@ class OpenRouterModelFetcher(
         )
     }
 
-    /** Collapses newlines/whitespace into single spaces; no length cap so the
-     *  picker can render the model's full description and wrap it dynamically. */
+    /** Collapses newlines/whitespace into single spaces; no length cap so
+     *  [ChatModel.description] stays intact for future detail surfaces. */
     private fun String.normalizeDescription(): String =
         trim().replace(Regex("\\s+"), " ")
 

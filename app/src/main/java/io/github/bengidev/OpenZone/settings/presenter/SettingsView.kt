@@ -33,6 +33,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.bengidev.openzone.home.domain.ComposerReasoningLevel
+import io.github.bengidev.openzone.shared.networking.formatContextLength
 import io.github.bengidev.openzone.settings.application.SettingsState
 import io.github.bengidev.openzone.shared.networking.ChatModel
 import io.github.bengidev.openzone.settings.theme.SettingsTheme
@@ -252,6 +253,7 @@ private fun ModelRow(
     selected: Boolean,
     onClick: () -> Unit
 ) {
+    val palette = SettingsTheme.palette
     // No description — matches the home picker after the iOS-faithful pass.
     // Subtitle now carries the context length so the row still has secondary
     // info, but never renders OpenRouter's marketing prose.
@@ -259,18 +261,12 @@ private fun ModelRow(
         title = model.displayName,
         subtitle = model.contextLength?.let(::formatContextLength),
         subtitleBadges = buildList {
-            if (model.supportsReasoning) add("REASONING")
-            if (model.isFree) add("FREE")
+            if (model.supportsReasoning) add("REASONING" to palette.accent)
+            if (model.isFree) add("FREE" to palette.textMuted)
         },
         selected = selected,
         onClick = onClick
     )
-}
-
-private fun formatContextLength(tokens: Int): String = when {
-    tokens >= 1_000_000 -> "${tokens / 1_000_000}M ctx"
-    tokens >= 1_000 -> "${tokens / 1_000}K ctx"
-    else -> "$tokens ctx"
 }
 
 @Composable
@@ -285,7 +281,7 @@ private fun SelectableRow(
      * REASONING FREE`). Order is preserved — pass [REASONING, FREE] to render
      * REASONING first.
      */
-    subtitleBadges: List<String> = emptyList()
+    subtitleBadges: List<Pair<String, Color>> = emptyList()
 ) {
     val palette = SettingsTheme.palette
     val borderColor = if (selected) palette.accentPrimary else palette.lineSoft
@@ -321,13 +317,13 @@ private fun SelectableRow(
                             fontFamily = FontFamily.Monospace
                         )
                     }
-                    subtitleBadges.forEachIndexed { index, badge ->
+                    subtitleBadges.forEachIndexed { index, (label, color) ->
                         if (hasSubtitle || index > 0) {
                             Spacer(Modifier.width(8.dp))
                         }
                         Text(
-                            text = badge,
-                            color = palette.textTertiary,
+                            text = label,
+                            color = color,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 1.sp,

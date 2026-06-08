@@ -59,10 +59,19 @@ data class HomeState(
      * model selection. Drives the composer's "Add an API key" hint. Mirrors
      * iOS `HomeFeature` `hasAPIKey`.
      */
-    val hasApiKey: Boolean = false
+    val hasApiKey: Boolean = false,
+    /**
+     * Whether [ProviderPreferenceStore.preferenceFlow] has emitted at least once.
+     * Prevents the missing-key hint from flashing before credentials are known.
+     */
+    val hasLoadedPreference: Boolean = false
 ) {
     val canSend: Boolean
         get() = draftMessage.trim().isNotEmpty() && !isSending && isChatConfigured
+
+    /** Show the composer missing-key banner only after preference state is known. */
+    val showMissingApiKeyHint: Boolean
+        get() = hasLoadedPreference && !hasApiKey
 
     /** The currently selected model resolved against the available catalog. */
     val selectedModel: ChatModel?

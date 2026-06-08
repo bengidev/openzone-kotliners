@@ -53,6 +53,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.bengidev.openzone.home.application.HomeState
@@ -95,7 +99,7 @@ fun HomeComposerView(
         ComposerPromptPanel(
             draftMessage = state.draftMessage,
             canSend = state.canSend,
-            hasApiKey = state.hasApiKey,
+            showMissingApiKeyHint = state.showMissingApiKeyHint,
             onConfigureApiKeyTapped = onConfigureApiKeyTapped,
             onDraftMessageChanged = onDraftMessageChanged,
             onSendTapped = onSendTapped,
@@ -121,7 +125,7 @@ fun HomeComposerView(
 private fun ComposerPromptPanel(
     draftMessage: String,
     canSend: Boolean,
-    hasApiKey: Boolean,
+    showMissingApiKeyHint: Boolean,
     onConfigureApiKeyTapped: () -> Unit,
     onDraftMessageChanged: (String) -> Unit,
     onSendTapped: () -> Unit,
@@ -155,7 +159,7 @@ private fun ComposerPromptPanel(
             .padding(top = 14.dp, bottom = 10.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        if (!hasApiKey) {
+        if (showMissingApiKeyHint) {
             MissingApiKeyHint(onClick = onConfigureApiKeyTapped)
         }
 
@@ -269,6 +273,10 @@ private fun MissingApiKeyHint(onClick: () -> Unit) {
             .clip(shape)
             .background(fill)
             .border(width = 1.dp, color = border, shape = shape)
+            .semantics {
+                role = Role.Button
+                contentDescription = "Add an API key in Settings to start sending"
+            }
             .clickable(onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 9.dp),
         verticalAlignment = Alignment.CenterVertically,

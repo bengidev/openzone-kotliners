@@ -35,3 +35,10 @@ data class ChatModel(
     val supportsReasoning: Boolean = false,
     val description: String = ""
 )
+
+/** Formats a token context window for display, e.g. `128K ctx`. */
+fun formatContextLength(tokens: Int): String = when {
+    tokens >= 1_000_000 -> "${tokens / 1_000_000}M ctx"
+    tokens >= 1_000 -> "${tokens / 1_000}K ctx"
+    else -> "$tokens ctx"
+}

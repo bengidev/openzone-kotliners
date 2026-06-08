@@ -97,7 +97,8 @@ class HomeComponent(
                         selectedModelId = modelId,
                         reasoningLevel = pref?.reasoningLevel ?: ComposerReasoningLevel.Off,
                         isChatConfigured = isChatConfigured(),
-                        hasApiKey = hasApiKey()
+                        hasApiKey = hasApiKey(),
+                        hasLoadedPreference = true
                     )
                 }
             }
@@ -124,8 +125,10 @@ class HomeComponent(
 
     /** Whether a credential exists for the selected provider (model-agnostic). */
     private fun hasApiKey(): Boolean {
-        val pref = preference ?: return false
-        return credentialStore?.hasSecret(pref.providerId) == true
+        val providerId = preference?.providerId
+            ?: providers.firstOrNull()?.id
+            ?: return false
+        return credentialStore?.hasSecret(providerId) == true
     }
 
     private suspend fun resolveAvailableModels(providerId: String): List<ChatModel> {

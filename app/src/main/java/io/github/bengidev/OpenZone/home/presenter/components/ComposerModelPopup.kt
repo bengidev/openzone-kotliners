@@ -36,13 +36,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import io.github.bengidev.openzone.home.application.HomeState
 import io.github.bengidev.openzone.home.theme.HomeTheme
+import io.github.bengidev.openzone.shared.networking.formatContextLength
 import io.github.bengidev.openzone.shared.networking.ChatModel
 
 /**
@@ -270,10 +270,4 @@ private fun ModelPickerRow(
             )
         }
     }
-}
-
-private fun formatContextLength(tokens: Int): String = when {
-    tokens >= 1_000_000 -> "${tokens / 1_000_000}M ctx"
-    tokens >= 1_000 -> "${tokens / 1_000}K ctx"
-    else -> "$tokens ctx"
 }

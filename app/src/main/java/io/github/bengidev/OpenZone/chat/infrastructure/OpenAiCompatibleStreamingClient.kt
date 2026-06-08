@@ -24,6 +24,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.IOException
+import java.util.concurrent.TimeUnit
 import kotlin.coroutines.coroutineContext
 
 /**
@@ -44,7 +45,7 @@ import kotlin.coroutines.coroutineContext
  */
 class OpenAiCompatibleStreamingClient(
     private val credentialStore: CredentialStore,
-    private val callFactory: Call.Factory = OkHttpClient(),
+    private val callFactory: Call.Factory = defaultStreamingClient,
     private val json: Json = defaultJson
 ) : ChatAPIClient {
 
@@ -166,6 +167,22 @@ class OpenAiCompatibleStreamingClient(
 
     private companion object {
         val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
+
+        /**
+         * Default client tuned for long-lived SSE streaming. The read timeout is
+         * disabled because a reasoning model can stay silent (no SSE frame) for
+         * far longer than OkHttp's 10s default while it "thinks" before the first
+         * token — a non-zero read timeout surfaces as `SocketTimeoutException`
+         * ("timeout") and aborts the stream. The overall call timeout is likewise
+         * disabled so a long completion isn't cut off; connect/write keep finite
+         * bounds so a genuinely unreachable host still fails fast.
+         */
+        val defaultStreamingClient: OkHttpClient = OkHttpClient.Builder()
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(0, TimeUnit.SECONDS)
+            .callTimeout(0, TimeUnit.SECONDS)
+            .build()
 
         val defaultJson = Json {
             ignoreUnknownKeys = true

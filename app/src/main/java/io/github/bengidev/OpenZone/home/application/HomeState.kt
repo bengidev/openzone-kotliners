@@ -14,6 +14,12 @@ import io.github.bengidev.openzone.shared.networking.ChatModel
  * composer model popup filters this list via [modelSearchQuery] (debounced into
  * [debouncedModelQuery]) and [modelFilterFreeOnly].
  *
+ * [reasoningLevel] defaults to [ComposerReasoningLevel.Off]. The reasoning
+ * indicator and effort control are shown only when [selectedModelSupportsReasoning]
+ * is true — i.e. the currently selected model has [ChatModel.supportsReasoning]
+ * set. Changing the level via the composer chip or Settings both write through
+ * to the shared [ProviderPreferenceStore] so the value is durable.
+ *
  * `ComposerSpeedMode` remains a purely cosmetic composer affordance and is
  * deliberately excluded from the provider request path (see `ChatRequest`).
  */
@@ -22,7 +28,7 @@ data class HomeState(
     val isSending: Boolean = false,
     val availableModels: List<ChatModel> = emptyList(),
     val selectedModelId: String? = null,
-    val reasoningLevel: ComposerReasoningLevel = ComposerReasoningLevel.High,
+    val reasoningLevel: ComposerReasoningLevel = ComposerReasoningLevel.Off,
     val speedMode: ComposerSpeedMode = ComposerSpeedMode.Standard,
     val contextUsage: ComposerContextUsage = ComposerContextUsage(
         usedTokens = 107_000,
@@ -53,6 +59,13 @@ data class HomeState(
         get() = selectedModel?.displayName
             ?: selectedModelId
             ?: "Select model"
+
+    /**
+     * Whether the selected model supports reasoning. Controls visibility of the
+     * reasoning indicator and effort control in the composer rail and Settings.
+     */
+    val selectedModelSupportsReasoning: Boolean
+        get() = selectedModel?.supportsReasoning == true
 
     /** The catalog filtered by the debounced search query and free-tier toggle. */
     val filteredModels: List<ChatModel>

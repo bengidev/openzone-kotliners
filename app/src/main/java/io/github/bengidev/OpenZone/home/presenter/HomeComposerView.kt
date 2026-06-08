@@ -282,10 +282,13 @@ private fun ComposerContextRail(
                         onModelPopupOpen()
                     }
                 )
-                ComposerReasoningChip(
-                    selectedLevel = state.reasoningLevel,
-                    onLevelSelected = onReasoningLevelSelected
-                )
+                // Reasoning chip — only shown when the selected model supports reasoning.
+                if (state.selectedModelSupportsReasoning) {
+                    ComposerReasoningChip(
+                        selectedLevel = state.reasoningLevel,
+                        onLevelSelected = onReasoningLevelSelected
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.weight(1f))

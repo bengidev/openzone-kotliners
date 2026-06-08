@@ -15,7 +15,23 @@ import kotlinx.serialization.Serializable
 internal data class ChatCompletionRequest(
     val model: String,
     val messages: List<WireMessage>,
-    val stream: Boolean = true
+    val stream: Boolean = true,
+    /**
+     * OpenRouter / OpenAI `reasoning` parameter. `null` means the field is
+     * omitted entirely from the serialized JSON (via `explicitNulls = false`
+     * on the shared [Json] instance) so non-reasoning models are unaffected.
+     */
+    val reasoning: WireReasoning? = null
+)
+
+/**
+ * Reasoning effort hint sent to providers that support chain-of-thought.
+ * Serializes as `{"effort": "low"|"medium"|"high"}`.
+ * Mirrors the OpenRouter `reasoning` request parameter.
+ */
+@Serializable
+internal data class WireReasoning(
+    val effort: String
 )
 
 @Serializable

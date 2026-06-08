@@ -9,6 +9,7 @@ import io.github.bengidev.openzone.chat.domain.ChatStreamingStatus
 import io.github.bengidev.openzone.chat.domain.ChatMessages
 import io.github.bengidev.openzone.chat.infrastructure.ChatAPIClient
 import io.github.bengidev.openzone.chat.infrastructure.ChatProviders
+import io.github.bengidev.openzone.home.domain.ComposerReasoningLevel
 import io.github.bengidev.openzone.shared.networking.ChatProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -43,6 +44,7 @@ class ChatComponent(
     private val scope: CoroutineScope,
     private val resolveProvider: () -> ChatProvider = { ChatProviders.openRouter },
     private val resolveModelId: () -> String? = { null },
+    private val resolveReasoningLevel: () -> ComposerReasoningLevel = { ComposerReasoningLevel.Off },
     private val canStartSend: () -> Boolean = { true },
     initialState: ChatState = ChatState()
 ) {
@@ -101,7 +103,8 @@ class ChatComponent(
             conversationId = snapshot.conversation.id,
             messages = _state.value.messages,
             modelId = modelId,
-            provider = provider
+            provider = provider,
+            reasoningLevel = resolveReasoningLevel()
         )
         beginStream(request, thinkingMessage.id, assistantMessage.id)
     }

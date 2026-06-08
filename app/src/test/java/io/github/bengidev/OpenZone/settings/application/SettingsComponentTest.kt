@@ -8,6 +8,7 @@ import io.github.bengidev.openzone.settings.infrastructure.InMemoryCredentialSto
 import io.github.bengidev.openzone.settings.infrastructure.InMemoryModelCatalogStore
 import io.github.bengidev.openzone.settings.infrastructure.InMemoryProviderPreferenceStore
 import io.github.bengidev.openzone.chat.infrastructure.ChatProviders
+import io.github.bengidev.openzone.home.domain.ComposerReasoningLevel
 import io.github.bengidev.openzone.shared.networking.CachedCatalog
 import io.github.bengidev.openzone.shared.networking.ChatModel
 import io.github.bengidev.openzone.shared.networking.ProviderPreference
@@ -192,5 +193,52 @@ class SettingsComponentTest {
         // Fetch was attempted but failed; curated fallback is shown.
         assertEquals(1, fetcher.fetchCount)
         assertEquals(ModelCatalog.openRouterFree, component.state.value.models)
+    }
+
+    @Test
+    fun `reasoning level defaults to Off on empty stores`() = runTest {
+        val scope = CoroutineScope(UnconfinedTestDispatcher(testScheduler))
+        val component = component(scope = scope)
+
+        assertEquals(ComposerReasoningLevel.Off, component.state.value.reasoningLevel)
+    }
+
+    @Test
+    fun `selecting reasoning level persists to preference store`() = runTest {
+        val scope = CoroutineScope(UnconfinedTestDispatcher(testScheduler))
+        val prefs = InMemoryProviderPreferenceStore()
+        val component = component(preferenceStore = prefs, scope = scope)
+
+        component.onReasoningLevelSelected(ComposerReasoningLevel.Medium)
+
+        assertEquals(ComposerReasoningLevel.Medium, component.state.value.reasoningLevel)
+        assertEquals(ComposerReasoningLevel.Medium, prefs.preference()?.reasoningLevel)
+    }
+
+    @Test
+    fun `restores persisted reasoning level on load`() = runTest {
+        val scope = CoroutineScope(UnconfinedTestDispatcher(testScheduler))
+        val saved = ModelCatalog.openRouterFree[2].id
+        val prefs = InMemoryProviderPreferenceStore(
+            ProviderPreference("openrouter", saved, ComposerReasoningLevel.High)
+        )
+        val component = component(preferenceStore = prefs, scope = scope)
+
+        assertEquals(ComposerReasoningLevel.High, component.state.value.reasoningLevel)
+    }
+
+    @Test
+    fun `reasoning section visible only for reasoning-capable selected model`() = runTest {
+        val scope = CoroutineScope(UnconfinedTestDispatcher(testScheduler))
+        // Nemotron (index 2) supports reasoning; Llama (index 0) does not.
+        val reasoningModel = ModelCatalog.openRouterFree[2].id
+        val plainModel = ModelCatalog.openRouterFree[0].id
+        val component = component(scope = scope)
+
+        component.onModelSelected(plainModel)
+        assertFalse(component.state.value.selectedModelSupportsReasoning)
+
+        component.onModelSelected(reasoningModel)
+        assertTrue(component.state.value.selectedModelSupportsReasoning)
     }
 }

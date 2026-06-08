@@ -4,6 +4,7 @@ import com.arkivanov.decompose.ComponentContext
 import com.arkivanov.decompose.value.MutableValue
 import com.arkivanov.decompose.value.Value
 import com.arkivanov.decompose.value.update
+import io.github.bengidev.openzone.home.domain.ComposerReasoningLevel
 import io.github.bengidev.openzone.settings.domain.ModelCatalog
 import io.github.bengidev.openzone.settings.infrastructure.ModelCatalogFetcher
 import io.github.bengidev.openzone.shared.networking.ChatModel
@@ -77,6 +78,7 @@ class SettingsComponent(
                     selectedProviderId = providerId,
                     models = models,
                     selectedModelId = modelId,
+                    reasoningLevel = persisted?.reasoningLevel ?: ComposerReasoningLevel.Off,
                     hasApiKey = providerId?.let(credentialStore::hasSecret) ?: false,
                     isLoaded = true
                 )
@@ -186,6 +188,12 @@ class SettingsComponent(
         if (_state.value.models.none { it.id == modelId }) return
         _state.update { it.copy(selectedModelId = modelId) }
         scope.launch { preferenceStore.setModel(providerId, modelId) }
+    }
+
+    /** Update the reasoning effort level and persist it. */
+    fun onReasoningLevelSelected(level: ComposerReasoningLevel) {
+        _state.update { it.copy(reasoningLevel = level) }
+        scope.launch { preferenceStore.setReasoningLevel(level) }
     }
 
     fun onCloseTapped() = onClose()

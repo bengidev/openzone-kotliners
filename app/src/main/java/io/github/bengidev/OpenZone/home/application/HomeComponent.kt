@@ -75,6 +75,7 @@ class HomeComponent(
         scope = chatScope,
         resolveProvider = { resolveProvider() },
         resolveModelId = { preference?.modelId },
+        resolveReasoningLevel = { resolveReasoningLevel() },
         canStartSend = { isChatConfigured() }
     )
 
@@ -91,6 +92,7 @@ class HomeComponent(
                     it.copy(
                         availableModels = models,
                         selectedModelId = modelId,
+                        reasoningLevel = pref?.reasoningLevel ?: ComposerReasoningLevel.Off,
                         isChatConfigured = isChatConfigured()
                     )
                 }
@@ -106,6 +108,9 @@ class HomeComponent(
             ?: providers.firstOrNull()
             ?: ChatProviders.openRouter
     }
+
+    private fun resolveReasoningLevel(): ComposerReasoningLevel =
+        preference?.reasoningLevel ?: ComposerReasoningLevel.Off
 
     private fun isChatConfigured(): Boolean {
         val pref = preference ?: return false
@@ -197,6 +202,7 @@ class HomeComponent(
 
     fun onReasoningLevelSelected(level: ComposerReasoningLevel) {
         _state.update { it.copy(reasoningLevel = level) }
+        chatScope.launch { preferenceStore?.setReasoningLevel(level) }
     }
 
     fun onSpeedModeSelected(mode: ComposerSpeedMode) {

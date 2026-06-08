@@ -32,6 +32,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.github.bengidev.openzone.home.domain.ComposerReasoningLevel
 import io.github.bengidev.openzone.settings.application.SettingsState
 import io.github.bengidev.openzone.shared.networking.ChatModel
 import io.github.bengidev.openzone.settings.theme.SettingsTheme
@@ -51,6 +52,7 @@ fun SettingsView(
     onClearApiKey: () -> Unit,
     onProviderSelected: (String) -> Unit,
     onModelSelected: (String) -> Unit,
+    onReasoningLevelSelected: (ComposerReasoningLevel) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val palette = SettingsTheme.palette
@@ -102,6 +104,17 @@ fun SettingsView(
                 )
                 Spacer(Modifier.height(8.dp))
             }
+        }
+
+        // Reasoning effort — only shown when the selected model supports reasoning.
+        if (state.selectedModelSupportsReasoning) {
+            Spacer(Modifier.height(24.dp))
+            SectionLabel("REASONING EFFORT")
+            Spacer(Modifier.height(8.dp))
+            ReasoningLevelPicker(
+                selectedLevel = state.reasoningLevel,
+                onLevelSelected = onReasoningLevelSelected
+            )
         }
     }
 }
@@ -300,6 +313,46 @@ private fun SelectableRow(
                 tint = palette.accentPrimary,
                 modifier = Modifier.width(20.dp).height(20.dp)
             )
+        }
+    }
+}
+
+/** Segmented-style row of reasoning level buttons. */
+@Composable
+private fun ReasoningLevelPicker(
+    selectedLevel: ComposerReasoningLevel,
+    onLevelSelected: (ComposerReasoningLevel) -> Unit
+) {
+    val palette = SettingsTheme.palette
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        ComposerReasoningLevel.entries.forEach { level ->
+            val selected = level == selectedLevel
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(44.dp)
+                    .background(
+                        if (selected) palette.controlStrong else palette.surface,
+                        RoundedCornerShape(10.dp)
+                    )
+                    .border(
+                        width = if (selected) 2.dp else 1.dp,
+                        color = if (selected) palette.accentPrimary else palette.lineSoft,
+                        shape = RoundedCornerShape(10.dp)
+                    )
+                    .clickableWhen(true) { onLevelSelected(level) },
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = level.title,
+                    color = if (selected) palette.controlStrongText else palette.textSecondary,
+                    fontSize = 14.sp,
+                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
+                )
+            }
         }
     }
 }

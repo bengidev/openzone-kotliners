@@ -1,5 +1,6 @@
 package io.github.bengidev.openzone.chat.domain
 
+import io.github.bengidev.openzone.home.domain.ComposerReasoningLevel
 import io.github.bengidev.openzone.shared.networking.ChatProvider
 
 /**
@@ -11,13 +12,19 @@ import io.github.bengidev.openzone.shared.networking.ChatProvider
  * store at call time. The secret itself never enters this value — only the
  * non-sensitive descriptor does.
  *
+ * [reasoningLevel] controls whether a `reasoning.effort` parameter is included
+ * in the wire request. [ComposerReasoningLevel.Off] (the default) means no
+ * reasoning parameter is sent. Only non-null [ComposerReasoningLevel.wireEffort]
+ * values reach the provider.
+ *
  * Mirrors iOS `ChatRequest`.
  */
 data class ChatRequest(
     val conversationId: String,
     val messages: List<ChatMessage>,
     val modelId: String,
-    val provider: ChatProvider
+    val provider: ChatProvider,
+    val reasoningLevel: ComposerReasoningLevel = ComposerReasoningLevel.Off
 ) {
     val latestUserText: String
         get() = latestUserTextIn(messages)

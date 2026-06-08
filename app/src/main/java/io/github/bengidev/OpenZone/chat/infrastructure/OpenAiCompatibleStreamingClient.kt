@@ -9,6 +9,7 @@ import io.github.bengidev.openzone.chat.infrastructure.wire.ChatCompletionChunk
 import io.github.bengidev.openzone.chat.infrastructure.wire.ChatCompletionRequest
 import io.github.bengidev.openzone.chat.infrastructure.wire.WireErrorEnvelope
 import io.github.bengidev.openzone.chat.infrastructure.wire.WireMessage
+import io.github.bengidev.openzone.chat.infrastructure.wire.WireReasoning
 import io.github.bengidev.openzone.shared.networking.AuthScheme
 import io.github.bengidev.openzone.shared.networking.ChatProvider
 import io.github.bengidev.openzone.shared.networking.CredentialStore
@@ -127,10 +128,15 @@ class OpenAiCompatibleStreamingClient(
 
     private fun buildRequest(request: ChatRequest, secret: String?): Request {
         val provider = request.provider
+        // Map the domain reasoning level to the wire `reasoning.effort` field.
+        // Off yields null effort, so `reasoning` stays null and is omitted from
+        // the serialized JSON entirely (explicitNulls = false).
+        val reasoning = request.reasoningLevel.wireEffort?.let { WireReasoning(effort = it) }
         val payload = ChatCompletionRequest(
             model = request.modelId,
             messages = request.messages.toWireMessages(),
-            stream = true
+            stream = true,
+            reasoning = reasoning
         )
         val bodyJson = json.encodeToString(ChatCompletionRequest.serializer(), payload)
         val builder = Request.Builder()

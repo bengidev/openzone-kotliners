@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import io.github.bengidev.openzone.home.domain.ComposerReasoningLevel
 import io.github.bengidev.openzone.shared.networking.ProviderPreference
 import io.github.bengidev.openzone.shared.networking.ProviderPreferenceStore
 import kotlinx.coroutines.flow.Flow
@@ -14,8 +15,8 @@ import kotlinx.coroutines.flow.map
 
 /**
  * [ProviderPreferenceStore] backed by Preferences DataStore. Persists the
- * non-secret provider/model selection across launches. Android analog of the
- * iOS UserDefaults-backed selection store. Mirrors the established
+ * non-secret provider/model/reasoning selection across launches. Android analog
+ * of the iOS UserDefaults-backed selection store. Mirrors the established
  * `DataStoreOnboardingRepository` pattern (interface in the shared seam,
  * concrete DataStore impl here).
  *
@@ -44,17 +45,30 @@ class DataStoreProviderPreferenceStore(
         }
     }
 
+    override suspend fun setReasoningLevel(level: ComposerReasoningLevel) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_REASONING_LEVEL] = level.name
+        }
+    }
+
     private fun Preferences.toPreference(): ProviderPreference? {
         val providerId = this[KEY_PROVIDER_ID] ?: return null
         return ProviderPreference(
             providerId = providerId,
-            modelId = this[KEY_MODEL_ID]
+            modelId = this[KEY_MODEL_ID],
+            reasoningLevel = this[KEY_REASONING_LEVEL]?.let(::reasoningLevelFromName)
+                ?: ComposerReasoningLevel.Off
         )
     }
+
+    /** Tolerant parse: an unknown/legacy persisted value falls back to [ComposerReasoningLevel.Off]. */
+    private fun reasoningLevelFromName(name: String): ComposerReasoningLevel =
+        ComposerReasoningLevel.entries.firstOrNull { it.name == name } ?: ComposerReasoningLevel.Off
 
     companion object {
         private val KEY_PROVIDER_ID = stringPreferencesKey("provider_id")
         private val KEY_MODEL_ID = stringPreferencesKey("model_id")
+        private val KEY_REASONING_LEVEL = stringPreferencesKey("reasoning_level")
 
         private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(
             name = "provider_prefs"

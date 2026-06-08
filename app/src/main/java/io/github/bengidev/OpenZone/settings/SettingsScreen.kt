@@ -78,7 +78,8 @@ fun SettingsScreen(
                     onSaveApiKey = component::onSaveApiKey,
                     onClearApiKey = component::onClearApiKey,
                     onProviderSelected = component::onProviderSelected,
-                    onModelSelected = component::onModelSelected
+                    onModelSelected = component::onModelSelected,
+                    onReasoningLevelSelected = component::onReasoningLevelSelected
                 )
             }
         }

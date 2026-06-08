@@ -7,6 +7,7 @@ import com.arkivanov.decompose.value.update
 import io.github.bengidev.openzone.chat.application.ChatComponent
 import io.github.bengidev.openzone.chat.application.ChatState
 import io.github.bengidev.openzone.chat.infrastructure.ChatAPIClient
+import io.github.bengidev.openzone.chat.infrastructure.ChatHistoryStore
 import io.github.bengidev.openzone.chat.infrastructure.ChatProviders
 import io.github.bengidev.openzone.chat.infrastructure.OpenAiCompatibleStreamingClient
 import io.github.bengidev.openzone.home.domain.ComposerReasoningLevel
@@ -54,6 +55,7 @@ class HomeComponent(
     private val catalogStore: ModelCatalogStore? = null,
     private val catalogFetcher: ModelCatalogFetcher? = null,
     apiClient: ChatAPIClient? = null,
+    private val historyStore: ChatHistoryStore? = null,
     private val providers: List<ChatProvider> = ChatProviders.all,
     private val onSidebarToggle: () -> Unit = {}
 ) : ComponentContext by componentContext {
@@ -76,8 +78,9 @@ class HomeComponent(
         resolveProvider = { resolveProvider() },
         resolveModelId = { preference?.modelId },
         resolveReasoningLevel = { resolveReasoningLevel() },
-        canStartSend = { isChatConfigured() }
-    )
+        canStartSend = { isChatConfigured() },
+        historyStore = historyStore
+    ).also { it.restoreHistory() }
 
     private var debounceJob: Job? = null
 

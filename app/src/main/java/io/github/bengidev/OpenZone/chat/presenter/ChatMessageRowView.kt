@@ -1,11 +1,5 @@
 package io.github.bengidev.openzone.chat.presenter
 
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,10 +12,8 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -130,22 +122,32 @@ private fun AssistantRow(
     val palette = ChatTheme.palette
     val typography = LocalChatTypography.current
 
+    // While the model is mid-stream with no tokens yet, render nothing — the
+    // reasoning card (or whatever is just above) is already signalling load.
+    // A "Streaming…" caption under an empty bubble stacked under the thinking
+    // card and made the screen look piled up. Errors and finished states still
+    // render normally.
+    val isEmptyMidStream = message.content.isEmpty() &&
+        streamingStatus == ChatStreamingStatus.RUNNING &&
+        !message.isComplete
+    if (isEmptyMidStream) return
+
     Column(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp, vertical = 4.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        Text(
-            text = message.content.ifEmpty {
-                if (streamingStatus == ChatStreamingStatus.RUNNING && !message.isComplete) "…" else ""
-            },
-            style = typography.messageBody,
-            color = palette.assistantBubbleText,
-            modifier = Modifier
-                .widthIn(max = 540.dp)
-                .align(Alignment.Start)
-        )
+        if (message.content.isNotEmpty()) {
+            Text(
+                text = message.content,
+                style = typography.messageBody,
+                color = palette.assistantBubbleText,
+                modifier = Modifier
+                    .widthIn(max = 540.dp)
+                    .align(Alignment.Start)
+            )
+        }
         if (isLastAssistantMessage) {
             AssistantMetaRow(
                 streamingStatus = streamingStatus,
@@ -174,7 +176,15 @@ private fun AssistantMetaRow(
             )
         }
         ChatStreamingStatus.RUNNING -> if (!isComplete) {
-            StreamingDots(color = palette.streamingDot)
+            // Subtle subtitle while streaming — mirrors iOS `Text("Streaming…")`.
+            // The earlier three-dot pulse stacked visually with the reasoning
+            // card and the empty assistant bubble; a single muted caption reads
+            // as one continuous loading state instead.
+            Text(
+                text = "Streaming…",
+                style = typography.messageMeta,
+                color = palette.messageMetaText
+            )
         } else {
             Text(
                 text = formatTime(timestamp),
@@ -223,32 +233,6 @@ private fun SystemRow(content: String, modifier: Modifier = Modifier) {
             .fillMaxWidth()
             .padding(horizontal = 20.dp, vertical = 8.dp)
     )
-}
-
-@Composable
-private fun StreamingDots(color: androidx.compose.ui.graphics.Color) {
-    val transition = rememberInfiniteTransition(label = "streaming-dots")
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        repeat(3) { i ->
-            val opacity by transition.animateFloat(
-                initialValue = 0.3f,
-                targetValue = 1f,
-                animationSpec = infiniteRepeatable(
-                    animation = tween(700, delayMillis = i * 120, easing = LinearEasing),
-                    repeatMode = RepeatMode.Reverse
-                ),
-                label = "dot-$i"
-            )
-            Box(
-                modifier = Modifier
-                    .padding(horizontal = 2.dp)
-                    .alpha(opacity)
-                    .clip(RoundedCornerShape(50))
-                    .background(color)
-                    .padding(3.dp)
-            )
-        }
-    }
 }
 
 private val TimeFormatter = SimpleDateFormat("HH:mm", Locale.getDefault())

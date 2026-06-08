@@ -42,6 +42,7 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import io.github.bengidev.openzone.home.application.HomeState
 import io.github.bengidev.openzone.home.theme.HomeTheme
+import io.github.bengidev.openzone.shared.networking.formatContextLength
 import io.github.bengidev.openzone.shared.networking.ChatModel
 
 /**
@@ -211,53 +212,51 @@ private fun ModelPickerRow(
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = model.displayName,
-                    color = palette.textPrimary,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium
-                )
-                if (model.isFree) {
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        text = "FREE",
-                        color = palette.textMuted,
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.8.sp
-                    )
-                }
-                if (model.supportsReasoning) {
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        text = "REASONING",
-                        color = palette.accent,
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.8.sp
-                    )
-                }
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            // Full model name on its own line — wraps freely, never truncates.
+            Text(
+                text = model.displayName,
+                color = palette.textPrimary,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium
+            )
+            // Subtitle row — context length + badges flow inline. Order is
+            // ctx, REASONING, FREE; matches the Settings model row layout.
+            val ctxLabel = model.contextLength?.let(::formatContextLength)
+            val badges = buildList {
+                if (model.supportsReasoning) add("REASONING" to palette.accent)
+                if (model.isFree) add("FREE" to palette.textMuted)
             }
-            if (model.description.isNotBlank()) {
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    text = model.description,
-                    color = palette.textSecondary,
-                    fontSize = 11.sp,
-                    fontFamily = FontFamily.Default,
-                    maxLines = 1
-                )
-            }
-            model.contextLength?.let { ctx ->
-                Spacer(Modifier.height(1.dp))
-                Text(
-                    text = formatContextLength(ctx),
-                    color = palette.textMuted,
-                    fontSize = 10.sp,
-                    fontFamily = FontFamily.Monospace
-                )
+            if (ctxLabel != null || badges.isNotEmpty()) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (ctxLabel != null) {
+                        Text(
+                            text = ctxLabel,
+                            color = palette.textMuted,
+                            fontSize = 10.sp,
+                            fontFamily = FontFamily.Monospace
+                        )
+                    }
+                    badges.forEachIndexed { index, (label, color) ->
+                        if (ctxLabel != null || index > 0) {
+                            Spacer(Modifier.width(6.dp))
+                        }
+                        Text(
+                            text = label,
+                            color = color,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.8.sp,
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                    }
+                }
             }
         }
 
@@ -271,10 +270,4 @@ private fun ModelPickerRow(
             )
         }
     }
-}
-
-private fun formatContextLength(tokens: Int): String = when {
-    tokens >= 1_000_000 -> "${tokens / 1_000_000}M ctx"
-    tokens >= 1_000 -> "${tokens / 1_000}K ctx"
-    else -> "$tokens ctx"
 }

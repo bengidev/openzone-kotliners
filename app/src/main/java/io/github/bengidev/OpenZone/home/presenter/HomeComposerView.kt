@@ -2,6 +2,7 @@ package io.github.bengidev.openzone.home.presenter
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,10 +24,12 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.window.Popup
 import androidx.compose.foundation.Canvas
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.KeyOff
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.outlined.Bolt
@@ -50,6 +53,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.bengidev.openzone.home.application.HomeState
@@ -69,6 +76,7 @@ fun HomeComposerView(
     onSendTapped: () -> Unit,
     onAttachmentTapped: () -> Unit,
     onMicrophoneTapped: () -> Unit,
+    onConfigureApiKeyTapped: () -> Unit,
     onModelPopupOpen: () -> Unit,
     onModelPopupDismiss: () -> Unit,
     onModelSearchQueryChanged: (String) -> Unit,
@@ -91,6 +99,8 @@ fun HomeComposerView(
         ComposerPromptPanel(
             draftMessage = state.draftMessage,
             canSend = state.canSend,
+            showMissingApiKeyHint = state.showMissingApiKeyHint,
+            onConfigureApiKeyTapped = onConfigureApiKeyTapped,
             onDraftMessageChanged = onDraftMessageChanged,
             onSendTapped = onSendTapped,
             onAttachmentTapped = onAttachmentTapped,
@@ -115,6 +125,8 @@ fun HomeComposerView(
 private fun ComposerPromptPanel(
     draftMessage: String,
     canSend: Boolean,
+    showMissingApiKeyHint: Boolean,
+    onConfigureApiKeyTapped: () -> Unit,
     onDraftMessageChanged: (String) -> Unit,
     onSendTapped: () -> Unit,
     onAttachmentTapped: () -> Unit,
@@ -147,6 +159,10 @@ private fun ComposerPromptPanel(
             .padding(top = 14.dp, bottom = 10.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
+        if (showMissingApiKeyHint) {
+            MissingApiKeyHint(onClick = onConfigureApiKeyTapped)
+        }
+
         TextField(
             value = draftMessage,
             onValueChange = onDraftMessageChanged,
@@ -236,6 +252,56 @@ private fun ComposerPromptIconButton(
         modifier = Modifier.size(30.dp)
     ) {
         content()
+    }
+}
+
+/**
+ * Tappable notice shown above the composer input when no API key is stored.
+ * Routes to Settings. Mirrors iOS `MissingAPIKeyHint`: slashed-key icon,
+ * two-line label, trailing chevron, soft rounded surfaceSubtle background.
+ */
+@Composable
+private fun MissingApiKeyHint(onClick: () -> Unit) {
+    val palette = HomeTheme.palette
+    val shape = RoundedCornerShape(14.dp)
+    val fill = palette.surfaceSubtle.copy(alpha = if (palette.isDark) 0.5f else 0.8f)
+    val border = palette.border.copy(alpha = if (palette.isDark) 0.45f else 0.6f)
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(fill)
+            .border(width = 1.dp, color = border, shape = shape)
+            .semantics {
+                role = Role.Button
+                contentDescription = "Add an API key in Settings to start sending"
+            }
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 9.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Icon(
+            imageVector = Icons.Default.KeyOff,
+            contentDescription = null,
+            tint = palette.textSecondary,
+            modifier = Modifier.size(15.dp)
+        )
+        Text(
+            text = "Add an API key in Settings to start sending",
+            style = HomeTheme.typography.chipLabel,
+            color = palette.textSecondary,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
+        )
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = palette.textSecondary,
+            modifier = Modifier.size(14.dp)
+        )
     }
 }
 

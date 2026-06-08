@@ -57,8 +57,7 @@ class MainActivity : ComponentActivity() {
             preferenceStore = DataStoreProviderPreferenceStore(applicationContext),
             catalogStore = DataStoreModelCatalogStore(applicationContext),
             catalogFetcher = OpenRouterModelFetcher(),
-            historyStore = chatHistoryStore,
-            onSidebarToggle = { /* SideStory overlay — future */ }
+            historyStore = chatHistoryStore
         )
 
         setContent {

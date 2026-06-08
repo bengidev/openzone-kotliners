@@ -24,4 +24,7 @@ interface ChatHistoryDao {
 
     @Query("SELECT * FROM conversations WHERE id = :conversationId LIMIT 1")
     suspend fun conversation(conversationId: String): ConversationEntity?
+
+    @Query("SELECT * FROM conversations ORDER BY updatedAt DESC, createdAt DESC")
+    suspend fun conversations(): List<ConversationEntity>
 }

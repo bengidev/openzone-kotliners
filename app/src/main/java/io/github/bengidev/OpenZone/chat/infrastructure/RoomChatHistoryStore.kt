@@ -33,4 +33,14 @@ class RoomChatHistoryStore(
 
     override suspend fun loadMessages(conversationId: String): List<ChatMessage> =
         dao.messagesFor(conversationId).map(ChatMessageMapper::toDomain)
+
+    override suspend fun listConversations(): List<ChatConversation> =
+        dao.conversations().map { entity ->
+            ChatConversation(
+                id = entity.id,
+                title = entity.title,
+                createdAt = entity.createdAt,
+                updatedAt = entity.updatedAt
+            )
+        }
 }

@@ -31,6 +31,11 @@ class InMemoryChatHistoryStore : ChatHistoryStore {
     override suspend fun loadMessages(conversationId: String): List<ChatMessage> =
         messagesByConversation[conversationId]?.values?.toList().orEmpty()
 
+    override suspend fun listConversations(): List<ChatConversation> =
+        conversations.values.sortedWith(
+            compareByDescending<ChatConversation> { it.updatedAt }.thenByDescending { it.createdAt }
+        )
+
     fun messageIds(conversationId: String): List<String> =
         messagesByConversation[conversationId]?.keys?.toList().orEmpty()
 }

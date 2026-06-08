@@ -56,8 +56,7 @@ class HomeComponent(
     private val catalogFetcher: ModelCatalogFetcher? = null,
     apiClient: ChatAPIClient? = null,
     private val historyStore: ChatHistoryStore? = null,
-    private val providers: List<ChatProvider> = ChatProviders.all,
-    private val onSidebarToggle: () -> Unit = {}
+    private val providers: List<ChatProvider> = ChatProviders.all
 ) : ComponentContext by componentContext {
 
     private val _state = MutableValue(HomeState())
@@ -152,7 +151,35 @@ class HomeComponent(
 
     // ---- Composer intents -------------------------------------------------
 
-    fun onSidebarToggleTapped() = onSidebarToggle()
+    // ---- Sidebar (conversation history) intents ---------------------------
+
+    /**
+     * Opens the sidebar drawer and refreshes the persisted conversation list
+     * (issue #8). The list loads lazily on open so it always reflects the latest
+     * turn-boundary writes. History only — Settings stays a separate top-bar sheet.
+     */
+    fun onSidebarToggleTapped() {
+        _state.update { it.copy(isSidebarPresented = true) }
+        val store = historyStore ?: return
+        chatScope.launch {
+            val conversations = store.listConversations()
+            _state.update { it.copy(conversations = conversations) }
+        }
+    }
+
+    fun onSidebarDismissed() {
+        _state.update { it.copy(isSidebarPresented = false) }
+    }
+
+    /**
+     * Reopens the selected conversation in the chat thread and closes the drawer.
+     * The chat reducer restores its messages and switches the active conversation
+     * so the user can continue sending into it.
+     */
+    fun onConversationSelected(conversation: io.github.bengidev.openzone.chat.domain.ChatConversation) {
+        chatComponent.openConversation(conversation)
+        _state.update { it.copy(isSidebarPresented = false) }
+    }
 
     fun onDraftMessageChanged(text: String) {
         _state.update { it.copy(draftMessage = text) }

@@ -252,22 +252,40 @@ private fun ModelRow(
     selected: Boolean,
     onClick: () -> Unit
 ) {
+    // No description — matches the home picker after the iOS-faithful pass.
+    // Subtitle now carries the context length so the row still has secondary
+    // info, but never renders OpenRouter's marketing prose.
     SelectableRow(
         title = model.displayName,
-        subtitle = model.description.ifBlank { model.id },
-        trailing = if (model.isFree) "FREE" else null,
+        subtitle = model.contextLength?.let(::formatContextLength),
+        subtitleBadges = buildList {
+            if (model.supportsReasoning) add("REASONING")
+            if (model.isFree) add("FREE")
+        },
         selected = selected,
         onClick = onClick
     )
 }
 
+private fun formatContextLength(tokens: Int): String = when {
+    tokens >= 1_000_000 -> "${tokens / 1_000_000}M ctx"
+    tokens >= 1_000 -> "${tokens / 1_000}K ctx"
+    else -> "$tokens ctx"
+}
+
 @Composable
 private fun SelectableRow(
     title: String,
-    subtitle: String,
+    subtitle: String?,
     selected: Boolean,
     onClick: () -> Unit,
-    trailing: String? = null
+    trailing: String? = null,
+    /**
+     * Optional badges rendered inline after the subtitle (e.g. `128K ctx
+     * REASONING FREE`). Order is preserved — pass [REASONING, FREE] to render
+     * REASONING first.
+     */
+    subtitleBadges: List<String> = emptyList()
 ) {
     val palette = SettingsTheme.palette
     val borderColor = if (selected) palette.accentPrimary else palette.lineSoft
@@ -287,13 +305,38 @@ private fun SelectableRow(
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Medium
             )
-            Spacer(Modifier.height(2.dp))
-            Text(
-                text = subtitle,
-                color = palette.textSecondary,
-                fontSize = 12.sp,
-                fontFamily = FontFamily.Monospace
-            )
+            val hasSubtitle = !subtitle.isNullOrBlank()
+            val hasBadges = subtitleBadges.isNotEmpty()
+            if (hasSubtitle || hasBadges) {
+                Spacer(Modifier.height(2.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (hasSubtitle) {
+                        Text(
+                            text = subtitle!!,
+                            color = palette.textSecondary,
+                            fontSize = 12.sp,
+                            fontFamily = FontFamily.Monospace
+                        )
+                    }
+                    subtitleBadges.forEachIndexed { index, badge ->
+                        if (hasSubtitle || index > 0) {
+                            Spacer(Modifier.width(8.dp))
+                        }
+                        Text(
+                            text = badge,
+                            color = palette.textTertiary,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp,
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                    }
+                }
+            }
         }
         if (trailing != null) {
             Spacer(Modifier.width(8.dp))

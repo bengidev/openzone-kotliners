@@ -53,7 +53,7 @@ import androidx.compose.ui.unit.dp
 import io.github.bengidev.openzone.chat.domain.ChatConversation
 import androidx.compose.ui.unit.sp
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
-import io.github.bengidev.openzone.home.theme.HomeTheme
+import io.github.bengidev.openzone.sidepanel.theme.SidePanelTheme
 import io.github.bengidev.openzone.sidepanel.application.SidePanelSessionComponent
 import io.github.bengidev.openzone.sidepanel.domain.SidePanelSessionSection
 
@@ -62,25 +62,21 @@ import io.github.bengidev.openzone.sidepanel.domain.SidePanelSessionSection
  * 1:1 — header (title + settings gear + close), capsule search field with
  * clear button, divider, empty / no-results centered states, and a long-press
  * context menu (rename / pin-toggle / delete) per row. Colors are sourced from
- * [HomeTheme.palette].
+ * [SidePanelTheme.palette].
  */
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun SidePanelSessionSidebarView(
     component: SidePanelSessionComponent,
-    onConversationSelected: (ChatConversation) -> Unit,
-    onPinTapped: (ChatConversation) -> Unit,
-    onRenameTapped: (ChatConversation) -> Unit,
-    onDeleteTapped: (ChatConversation) -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val state by component.state.subscribeAsState()
-    val palette = HomeTheme.palette
+    val palette = SidePanelTheme.palette
 
     var renameTarget by remember { mutableStateOf<ChatConversation?>(null) }
     var renameText by remember { mutableStateOf("") }
-
+    var deleteTarget by remember { mutableStateOf<ChatConversation?>(null) }
 
     Box(
         modifier = modifier
@@ -126,13 +122,13 @@ fun SidePanelSessionSidebarView(
                 else -> ConversationSectionsList(
                     sections = state.sections,
                     activeConversationId = state.activeConversationId,
-                    onConversationSelected = onConversationSelected,
-                    onPinTapped = onPinTapped,
+                    onConversationSelected = component::onConversationSelected,
+                    onPinTapped = component::onPinConversation,
                     onRenameTapped = { conversation ->
                         renameText = conversation.title
                         renameTarget = conversation
                     },
-                    onDeleteTapped = onDeleteTapped,
+                    onDeleteTapped = { deleteTarget = it },
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -152,6 +148,18 @@ fun SidePanelSessionSidebarView(
                 onDismiss = { renameTarget = null }
             )
         }
+
+        val pendingDelete = deleteTarget
+        if (pendingDelete != null) {
+            DeleteConversationDialog(
+                conversationTitle = pendingDelete.title,
+                onConfirm = {
+                    component.onDeleteConversation(pendingDelete)
+                    deleteTarget = null
+                },
+                onDismiss = { deleteTarget = null }
+            )
+        }
     }
 }
 
@@ -160,7 +168,7 @@ private fun SidebarHeader(
     onSettingsTapped: () -> Unit,
     onCloseTapped: () -> Unit
 ) {
-    val palette = HomeTheme.palette
+    val palette = SidePanelTheme.palette
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -202,7 +210,7 @@ private fun SearchField(
     query: String,
     onQueryChanged: (String) -> Unit
 ) {
-    val palette = HomeTheme.palette
+    val palette = SidePanelTheme.palette
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -299,7 +307,7 @@ private fun CenteredSidebarState(
     subtitle: String,
     modifier: Modifier = Modifier
 ) {
-    val palette = HomeTheme.palette
+    val palette = SidePanelTheme.palette
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -372,7 +380,7 @@ private fun ConversationSectionsList(
 
 @Composable
 private fun SectionHeader(title: String) {
-    val palette = HomeTheme.palette
+    val palette = SidePanelTheme.palette
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -401,7 +409,7 @@ private fun ConversationRow(
     onDelete: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val palette = HomeTheme.palette
+    val palette = SidePanelTheme.palette
     val relativeTime = SidePanelSessionSection.relativeLabel(conversation.updatedAt)
     var menuExpanded by remember { mutableStateOf(false) }
 
@@ -503,7 +511,10 @@ private fun RenameConversationDialog(
             )
         },
         confirmButton = {
-            TextButton(onClick = onConfirm) { Text("Save") }
+            TextButton(
+                onClick = onConfirm,
+                enabled = initialTitle.trim().isNotEmpty()
+            ) { Text("Save") }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Cancel") }
@@ -511,3 +522,25 @@ private fun RenameConversationDialog(
     )
 }
 
+@Composable
+private fun DeleteConversationDialog(
+    conversationTitle: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val palette = SidePanelTheme.palette
+    val label = conversationTitle.ifBlank { "Untitled chat" }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Delete conversation?") },
+        text = { Text(""$label" will be permanently deleted.") },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text("Delete", color = palette.danger)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
+}

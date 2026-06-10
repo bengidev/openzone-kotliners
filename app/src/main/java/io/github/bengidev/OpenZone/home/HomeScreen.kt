@@ -27,6 +27,7 @@ import io.github.bengidev.openzone.home.theme.HomeTheme
 import io.github.bengidev.openzone.home.theme.OpenZoneHomeTheme
 import io.github.bengidev.openzone.settings.SettingsScreen
 import io.github.bengidev.openzone.sidepanel.presenter.SidePanelSessionSidebarView
+import io.github.bengidev.openzone.sidepanel.theme.OpenZoneSidePanelTheme
 
 /**
  * Home shell — iOS `MainChat` welcome layout. Swaps between welcome
@@ -46,8 +47,6 @@ fun HomeScreen(
 ) {
     val state by component.state.subscribeAsState()
     val chatState by component.chatComponent.state.collectAsState()
-
-
 
     OpenZoneHomeTheme(darkTheme = darkTheme) {
         OpenZoneChatTheme(darkTheme = darkTheme) {
@@ -137,15 +136,13 @@ fun HomeScreen(
                 // Session sidebar — delegates to SidePanelSessionComponent
                 val sessionComponent = component.sidePanelSessionComponent
                 if (state.isSidebarPresented && sessionComponent != null) {
-                    SidePanelSessionSidebarView(
-                        component = sessionComponent,
-                        onConversationSelected = component::onConversationSelected,
-                        onPinTapped = { sessionComponent.onPinConversation(it) },
-                        onRenameTapped = {}, // sidebar handles rename dialog internally
-                        onDeleteTapped = { sessionComponent.onDeleteConversation(it) },
-                        onDismiss = component::onSidebarDismissed,
-                        modifier = Modifier.fillMaxSize()
-                    )
+                    OpenZoneSidePanelTheme(darkTheme = darkTheme) {
+                        SidePanelSessionSidebarView(
+                            component = sessionComponent,
+                            onDismiss = component::onSidebarDismissed,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
                 }
             }
         }

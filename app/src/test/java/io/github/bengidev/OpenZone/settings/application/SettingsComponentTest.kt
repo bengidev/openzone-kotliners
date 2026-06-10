@@ -8,10 +8,10 @@ import io.github.bengidev.openzone.settings.infrastructure.InMemoryCredentialSto
 import io.github.bengidev.openzone.settings.infrastructure.InMemoryModelCatalogStore
 import io.github.bengidev.openzone.settings.infrastructure.InMemoryProviderPreferenceStore
 import io.github.bengidev.openzone.chat.infrastructure.ChatProviders
-import io.github.bengidev.openzone.home.domain.ComposerReasoningLevel
-import io.github.bengidev.openzone.shared.networking.CachedCatalog
-import io.github.bengidev.openzone.shared.networking.ChatModel
-import io.github.bengidev.openzone.shared.networking.ProviderPreference
+import io.github.bengidev.openzone.shared.externals.preference.ComposerReasoningLevel
+import io.github.bengidev.openzone.shared.externals.networking.CachedCatalog
+import io.github.bengidev.openzone.shared.externals.networking.ChatModel
+import io.github.bengidev.openzone.shared.externals.preference.ProviderPreference
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher

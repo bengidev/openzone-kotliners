@@ -1,6 +1,6 @@
 package io.github.bengidev.openzone.settings.infrastructure
 
-import io.github.bengidev.openzone.shared.networking.ProviderPreference
+import io.github.bengidev.openzone.shared.externals.preference.ProviderPreference
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals

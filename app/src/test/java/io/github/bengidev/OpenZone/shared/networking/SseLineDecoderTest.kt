@@ -1,4 +1,4 @@
-package io.github.bengidev.openzone.shared.networking
+package io.github.bengidev.openzone.shared.externals.networking
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue

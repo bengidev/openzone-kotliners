@@ -1,4 +1,4 @@
-package io.github.bengidev.openzone.home.domain
+package io.github.bengidev.openzone.shared.externals.preference
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -6,9 +6,7 @@ import org.junit.Test
 
 /**
  * Unit tests for [ComposerReasoningLevel] — verifies the Off value exists and
- * the domain→wire effort mapping is correct (issue #7 acceptance criteria:
- * "Reasoning level extended with Off; existing Low/Medium/High preserved" and
- * "Off omits reasoning parameter; low/medium/high map to provider effort").
+ * the domain→wire effort mapping is correct.
  */
 class ComposerReasoningLevelTest {
 

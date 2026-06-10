@@ -1,8 +1,8 @@
 package io.github.bengidev.openzone.settings.infrastructure
 
-import io.github.bengidev.openzone.home.domain.ComposerReasoningLevel
-import io.github.bengidev.openzone.shared.networking.ProviderPreference
-import io.github.bengidev.openzone.shared.networking.ProviderPreferenceStore
+import io.github.bengidev.openzone.shared.externals.preference.ComposerReasoningLevel
+import io.github.bengidev.openzone.shared.externals.preference.ProviderPreference
+import io.github.bengidev.openzone.shared.externals.preference.ProviderPreferenceStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow

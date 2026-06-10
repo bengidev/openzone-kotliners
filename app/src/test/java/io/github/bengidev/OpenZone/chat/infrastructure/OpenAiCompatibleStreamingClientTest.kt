@@ -4,7 +4,7 @@ import io.github.bengidev.openzone.chat.domain.ChatMessageRole
 import io.github.bengidev.openzone.chat.domain.ChatMessages
 import io.github.bengidev.openzone.chat.domain.ChatRequest
 import io.github.bengidev.openzone.chat.domain.ChatStreamingEvent
-import io.github.bengidev.openzone.shared.networking.CredentialStore
+import io.github.bengidev.openzone.shared.externals.security.CredentialStore
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 import okhttp3.mockwebserver.MockResponse

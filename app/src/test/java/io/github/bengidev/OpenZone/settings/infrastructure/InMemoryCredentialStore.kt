@@ -1,6 +1,6 @@
 package io.github.bengidev.openzone.settings.infrastructure
 
-import io.github.bengidev.openzone.shared.networking.MutableCredentialStore
+import io.github.bengidev.openzone.shared.externals.security.MutableCredentialStore
 
 /**
  * In-memory [MutableCredentialStore] test double. Mirrors the encrypted store's

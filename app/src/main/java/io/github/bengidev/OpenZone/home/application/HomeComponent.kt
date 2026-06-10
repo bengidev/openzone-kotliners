@@ -11,20 +11,19 @@ import io.github.bengidev.openzone.chat.infrastructure.ChatAPIClient
 import io.github.bengidev.openzone.chat.infrastructure.ChatHistoryStore
 import io.github.bengidev.openzone.chat.infrastructure.ChatProviders
 import io.github.bengidev.openzone.chat.infrastructure.OpenAiCompatibleStreamingClient
-import io.github.bengidev.openzone.home.domain.ComposerReasoningLevel
 import io.github.bengidev.openzone.home.domain.ComposerSpeedMode
 import io.github.bengidev.openzone.settings.application.SettingsComponent
 import io.github.bengidev.openzone.settings.domain.ModelCatalog
-import io.github.bengidev.openzone.settings.infrastructure.DataStoreModelCatalogStore
-import io.github.bengidev.openzone.settings.infrastructure.ModelCatalogFetcher
-import io.github.bengidev.openzone.settings.infrastructure.OpenRouterModelFetcher
-import io.github.bengidev.openzone.shared.networking.ChatModel
-import io.github.bengidev.openzone.shared.networking.ChatProvider
-import io.github.bengidev.openzone.shared.networking.CredentialStore
-import io.github.bengidev.openzone.shared.networking.ModelCatalogStore
-import io.github.bengidev.openzone.shared.networking.MutableCredentialStore
-import io.github.bengidev.openzone.shared.networking.ProviderPreference
-import io.github.bengidev.openzone.shared.networking.ProviderPreferenceStore
+import io.github.bengidev.openzone.sidepanel.application.SidePanelSessionComponent
+import io.github.bengidev.openzone.shared.externals.networking.ChatModel
+import io.github.bengidev.openzone.shared.externals.networking.ChatProvider
+import io.github.bengidev.openzone.shared.externals.networking.ModelCatalogFetcher
+import io.github.bengidev.openzone.shared.externals.networking.ModelCatalogStore
+import io.github.bengidev.openzone.shared.externals.preference.ComposerReasoningLevel
+import io.github.bengidev.openzone.shared.externals.preference.ProviderPreference
+import io.github.bengidev.openzone.shared.externals.preference.ProviderPreferenceStore
+import io.github.bengidev.openzone.shared.externals.security.CredentialStore
+import io.github.bengidev.openzone.shared.externals.security.MutableCredentialStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -36,15 +35,12 @@ import kotlinx.coroutines.launch
 
 /**
  * Decompose component for the home welcome + composer shell.
- * Mirrors iOS `MainChat` / `HomeFeature` — owns a child `ChatComponent`
+ * Mirrors iOS `HomeFeature` — owns a child `ChatComponent`
  * whose state drives the welcome-vs-thread swap in the presenter.
  *
- * Model identity is the dynamic [HomeState.selectedModelId] string sourced
- * from [ProviderPreferenceStore]; `ComposerModelOption` enum has been retired.
- * The composer model popup filters
- * [HomeState.availableModels] (live cache or curated fallback) via debounced
- * search and a free-tier toggle; selection writes back to the shared store so
- * Settings always reflects the same choice.
+ * Also composes the side panel's [SidePanelSessionComponent] (session scope,
+ * saved-conversation browsing). Settings remains a separate child for now
+ * (migration target: [SidePanelSettingComponent]).
  *
  * `ComposerSpeedMode` is a purely cosmetic composer affordance and is excluded
  * from the provider request path.
@@ -81,6 +77,19 @@ class HomeComponent(
         canStartSend = { isChatConfigured() },
         historyStore = historyStore
     ).also { it.restoreHistory() }
+
+    /** Side panel session scope — saved-conversation browser. Mirrors iOS `SidePanelSessionFeature`. */
+    val sidePanelSessionComponent: SidePanelSessionComponent? =
+        if (historyStore != null) {
+            SidePanelSessionComponent(
+                componentContext = this,
+                historyStore = historyStore,
+                onOpenConversation = { conversation ->
+                    chatComponent.openConversation(conversation)
+                    _state.update { it.copy(isSidebarPresented = false) }
+                }
+            )
+        } else null
 
     private var debounceJob: Job? = null
 
@@ -160,37 +169,28 @@ class HomeComponent(
         _state.update { it.copy(isSettingsPresented = false) }
     }
 
-    // ---- Composer intents -------------------------------------------------
+    // ---- Sidebar intents (delegated to sidePanelSessionComponent) ----------
 
-    // ---- Sidebar (conversation history) intents ---------------------------
-
-    /**
-     * Opens the sidebar drawer and refreshes the persisted conversation list
-     * (issue #8). The list loads lazily on open so it always reflects the latest
-     * turn-boundary writes. History only — Settings stays a separate top-bar sheet.
-     */
     fun onSidebarToggleTapped() {
-        _state.update { it.copy(isSidebarPresented = true) }
-        val store = historyStore ?: return
-        chatScope.launch {
-            val conversations = store.listConversations()
-            _state.update { it.copy(conversations = conversations) }
-        }
+        _state.update { it.copy(isSidebarPresented = !it.isSidebarPresented) }
+        sidePanelSessionComponent?.onToggleSidebar()
     }
 
     fun onSidebarDismissed() {
         _state.update { it.copy(isSidebarPresented = false) }
+        sidePanelSessionComponent?.onDismissSidebar()
     }
 
     /**
      * Reopens the selected conversation in the chat thread and closes the drawer.
-     * The chat reducer restores its messages and switches the active conversation
-     * so the user can continue sending into it.
+     * Delegates to [SidePanelSessionComponent] which drives the chat component
+     * via the [onOpenConversation] callback.
      */
-    fun onConversationSelected(conversation: io.github.bengidev.openzone.chat.domain.ChatConversation) {
-        chatComponent.openConversation(conversation)
-        _state.update { it.copy(isSidebarPresented = false) }
+    fun onConversationSelected(conversation: ChatConversation) {
+        sidePanelSessionComponent?.onConversationSelected(conversation)
     }
+
+    // ---- Composer intents -------------------------------------------------
 
     fun onDraftMessageChanged(text: String) {
         _state.update { it.copy(draftMessage = text) }
@@ -231,10 +231,6 @@ class HomeComponent(
         _state.update { it.copy(modelFilterFreeOnly = !it.modelFilterFreeOnly) }
     }
 
-    /**
-     * Selects a model by [modelId] and persists it via the shared preference
-     * store so Settings reflects the same choice immediately.
-     */
     fun onModelSelected(modelId: String) {
         val providerId = preference?.providerId ?: providers.firstOrNull()?.id ?: return
         _state.update { it.copy(selectedModelId = modelId, isModelPopupPresented = false) }

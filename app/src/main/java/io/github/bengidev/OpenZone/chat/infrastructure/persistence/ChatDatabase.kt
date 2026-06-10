@@ -2,6 +2,8 @@ package io.github.bengidev.openzone.chat.infrastructure.persistence
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 
 /**
  * Room database hosting chat history (conversations + messages).
@@ -11,7 +13,7 @@ import androidx.room.RoomDatabase
  */
 @Database(
     entities = [ConversationEntity::class, MessageEntity::class],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class ChatDatabase : RoomDatabase() {
@@ -19,5 +21,11 @@ abstract class ChatDatabase : RoomDatabase() {
 
     companion object {
         const val DATABASE_NAME = "chat_history.db"
+
+        val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE conversations ADD COLUMN isPinned INTEGER NOT NULL DEFAULT 0")
+            }
+        }
     }
 }

@@ -8,8 +8,8 @@ import io.github.bengidev.openzone.chat.domain.ChatMessage
  *
  * Mirrors the onboarding `OnboardingRepository` pattern: a pure interface in the
  * feature's infrastructure layer, with a concrete storage implementation
- * ([io.github.bengidev.openzone.chat.infrastructure.RoomChatHistoryStore]) kept
- * behind it so the [io.github.bengidev.openzone.chat.application.ChatComponent]
+ * ([RoomChatHistoryStore]) kept behind it so the
+ * [io.github.bengidev.openzone.chat.application.ChatComponent]
  * reducer stays free of Room/Android dependencies and remains unit-testable with
  * an in-memory double.
  *
@@ -20,6 +20,8 @@ import io.github.bengidev.openzone.chat.domain.ChatMessage
  * Domain [ChatMessage] / [ChatConversation] types cross this boundary; the
  * mapping to and from the Room persistence representation happens inside the
  * concrete implementation, never leaking entities to callers.
+ *
+ * Mirrors iOS `ChatHistoryClient`.
  */
 interface ChatHistoryStore {
 
@@ -40,9 +42,18 @@ interface ChatHistoryStore {
     suspend fun loadMessages(conversationId: String): List<ChatMessage>
 
     /**
-     * Lists all persisted conversations, most-recently-updated first. Returns an
-     * empty list when no conversation has been persisted yet. Backs the sidebar
-     * conversation list (issue #8).
+     * Lists all persisted conversations, pinned-first then most-recently-updated
+     * first. Returns an empty list when no conversation has been persisted yet.
+     * Backs the sidebar conversation list.
      */
     suspend fun listConversations(): List<ChatConversation>
+
+    /** Deletes a conversation and all its messages (cascade). */
+    suspend fun deleteConversation(conversationId: String)
+
+    /** Rename a conversation's title. */
+    suspend fun renameConversation(conversationId: String, title: String)
+
+    /** Pin or unpin a conversation, floating it to the top of the list. */
+    suspend fun setPinned(conversationId: String, isPinned: Boolean)
 }

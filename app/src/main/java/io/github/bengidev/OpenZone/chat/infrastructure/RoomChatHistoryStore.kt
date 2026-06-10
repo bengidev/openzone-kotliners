@@ -22,7 +22,8 @@ class RoomChatHistoryStore(
                 id = conversation.id,
                 title = conversation.title,
                 createdAt = conversation.createdAt,
-                updatedAt = conversation.updatedAt
+                updatedAt = conversation.updatedAt,
+                isPinned = conversation.isPinned
             )
         )
     }
@@ -40,7 +41,22 @@ class RoomChatHistoryStore(
                 id = entity.id,
                 title = entity.title,
                 createdAt = entity.createdAt,
-                updatedAt = entity.updatedAt
+                updatedAt = entity.updatedAt,
+                isPinned = entity.isPinned
             )
         }
+
+    override suspend fun deleteConversation(conversationId: String) {
+        dao.deleteConversation(conversationId)
+    }
+
+    override suspend fun renameConversation(conversationId: String, title: String) {
+        val now = System.currentTimeMillis()
+        dao.renameConversation(conversationId, title, now)
+    }
+
+    override suspend fun setPinned(conversationId: String, isPinned: Boolean) {
+        val now = System.currentTimeMillis()
+        dao.setPinned(conversationId, isPinned, now)
+    }
 }

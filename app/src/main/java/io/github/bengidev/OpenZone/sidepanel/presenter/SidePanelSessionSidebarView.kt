@@ -349,6 +349,7 @@ private fun ConversationSectionsList(
         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
+        for (section in sections) {
             item(key = "section-${section.id}") {
                 SectionHeader(title = section.title)
             }

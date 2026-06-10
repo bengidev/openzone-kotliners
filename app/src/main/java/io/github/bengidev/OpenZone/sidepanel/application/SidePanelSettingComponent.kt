@@ -47,7 +47,8 @@ class SidePanelSettingComponent(
         val hasApiKey: Boolean = false,
         val isLoaded: Boolean = false,
         val isLoadingModels: Boolean = false,
-        val modelSupportsReasoning: Boolean = false
+        val modelSupportsReasoning: Boolean = false,
+        val errorMessage: String? = null
     ) {
         val selectedProvider: ChatProvider?
             get() = providers.firstOrNull { it.id == selectedProviderId }
@@ -100,16 +101,24 @@ class SidePanelSettingComponent(
         if (draft.isEmpty()) return
         val providerId = _state.value.selectedProviderId ?: return
         scope.launch {
-            credentialStore.setSecret(providerId, draft)
-            _state.update { it.copy(apiKeyDraft = "", hasApiKey = true) }
+            try {
+                credentialStore.setSecret(providerId, draft)
+                _state.update { it.copy(apiKeyDraft = "", hasApiKey = true, errorMessage = null) }
+            } catch (_: Exception) {
+                _state.update { it.copy(errorMessage = "Could not save the API key.") }
+            }
         }
     }
 
     fun onClearApiKey() {
         val providerId = _state.value.selectedProviderId ?: return
         scope.launch {
-            credentialStore.clear(providerId)
-            _state.update { it.copy(hasApiKey = false) }
+            try {
+                credentialStore.clear(providerId)
+                _state.update { it.copy(hasApiKey = false, errorMessage = null) }
+            } catch (_: Exception) {
+                _state.update { it.copy(errorMessage = "Could not remove the API key.") }
+            }
         }
     }
 

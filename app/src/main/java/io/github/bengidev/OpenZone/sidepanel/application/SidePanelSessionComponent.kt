@@ -19,9 +19,10 @@ import kotlinx.coroutines.launch
 class SidePanelSessionComponent(
     componentContext: ComponentContext,
     private val historyStore: ChatHistoryStore,
-    private val onOpenConversation: (ChatConversation) -> Unit = {},
-    private val onRenameConversation: (ChatConversation) -> Unit = {},
-    private val onDeleteConversation: (ChatConversation) -> Unit = {},
+    private val onOpenConversationDelegate: (ChatConversation) -> Unit = {},
+    private val onRenameConversationDelegate: (ChatConversation) -> Unit = {},
+    private val onDeleteConversationDelegate: (ChatConversation) -> Unit = {},
+    private val onSettingsButtonTappedDelegate: () -> Unit = {},
     activeConversationId: String? = null,
     mainScope: CoroutineScope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob())
 ) : ComponentContext by componentContext {
@@ -75,7 +76,7 @@ class SidePanelSessionComponent(
         _state.update {
             it.copy(isSidebarVisible = false, activeConversationId = conversation.id)
         }
-        onOpenConversation(conversation)
+        onOpenConversationDelegate(conversation)
     }
 
     fun onPinConversation(conversation: ChatConversation) {
@@ -91,7 +92,7 @@ class SidePanelSessionComponent(
             reloadConversations()
             val renamed = conversation.copy(title = newTitle)
             _state.update { it.copy(activeConversationId = renamed.id) }
-            onRenameConversation(renamed)
+            onRenameConversationDelegate(renamed)
         }
     }
 
@@ -99,8 +100,12 @@ class SidePanelSessionComponent(
         CoroutineScope(Dispatchers.IO + SupervisorJob()).launch {
             historyStore.deleteConversation(conversation.id)
             reloadConversations()
-            onDeleteConversation(conversation)
+            onDeleteConversationDelegate(conversation)
         }
+    }
+
+    fun onSettingsButtonTapped() {
+        onSettingsButtonTappedDelegate()
     }
 
     fun setActiveConversationId(id: String?) {

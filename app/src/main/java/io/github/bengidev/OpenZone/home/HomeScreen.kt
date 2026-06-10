@@ -15,7 +15,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import io.github.bengidev.openzone.chat.presenter.ChatThreadView
 import io.github.bengidev.openzone.chat.theme.OpenZoneChatTheme
 import io.github.bengidev.openzone.home.application.HomeComponent
@@ -46,6 +45,8 @@ fun HomeScreen(
 ) {
     val state by component.state.subscribeAsState()
     val chatState by component.chatComponent.state.collectAsState()
+
+
 
     OpenZoneHomeTheme(darkTheme = darkTheme) {
         OpenZoneChatTheme(darkTheme = darkTheme) {
@@ -139,7 +140,7 @@ fun HomeScreen(
                         component = sessionComponent,
                         onConversationSelected = component::onConversationSelected,
                         onPinTapped = { sessionComponent.onPinConversation(it) },
-                        onRenameTapped = { /* TODO: rename dialog */ },
+                        onRenameTapped = {}, // sidebar handles rename dialog internally
                         onDeleteTapped = { sessionComponent.onDeleteConversation(it) },
                         onDismiss = component::onSidebarDismissed,
                         modifier = Modifier.fillMaxSize()

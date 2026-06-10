@@ -84,10 +84,11 @@ class HomeComponent(
             SidePanelSessionComponent(
                 componentContext = this,
                 historyStore = historyStore,
-                onOpenConversation = { conversation ->
+                onOpenConversationDelegate = { conversation ->
                     chatComponent.openConversation(conversation)
                     _state.update { it.copy(isSidebarPresented = false) }
-                }
+                },
+                onSettingsButtonTappedDelegate = this::onSettingsTapped
             )
         } else null
 

@@ -6,7 +6,6 @@ import com.arkivanov.decompose.value.Value
 import com.arkivanov.decompose.value.update
 import io.github.bengidev.openzone.chat.application.ChatComponent
 import io.github.bengidev.openzone.chat.application.ChatState
-import io.github.bengidev.openzone.chat.domain.ChatConversation
 import io.github.bengidev.openzone.chat.infrastructure.ChatAPIClient
 import io.github.bengidev.openzone.chat.infrastructure.ChatHistoryStore
 import io.github.bengidev.openzone.chat.infrastructure.ChatProviders
@@ -88,13 +87,26 @@ class HomeComponent(
                     chatComponent.openConversation(conversation)
                     _state.update { it.copy(isSidebarPresented = false) }
                 },
-                onSettingsButtonTappedDelegate = this::onSettingsTapped
+                onDeleteConversationDelegate = { deleted ->
+                    if (chatComponent.state.value.conversation.id == deleted.id) {
+                        chatComponent.startNewConversation()
+                    }
+                },
+                onSettingsButtonTappedDelegate = this::onSettingsTapped,
+                activeConversationId = chatComponent.state.value.conversation.id
             )
         } else null
 
     private var debounceJob: Job? = null
 
     init {
+        sidePanelSessionComponent?.setActiveConversationId(chatComponent.state.value.conversation.id)
+        chatComponent.state
+            .onEach { chatState ->
+                sidePanelSessionComponent?.setActiveConversationId(chatState.conversation.id)
+            }
+            .launchIn(chatScope)
+
         preferenceStore?.preferenceFlow
             ?.onEach { pref ->
                 preference = pref
@@ -173,22 +185,13 @@ class HomeComponent(
     // ---- Sidebar intents (delegated to sidePanelSessionComponent) ----------
 
     fun onSidebarToggleTapped() {
-        _state.update { it.copy(isSidebarPresented = !it.isSidebarPresented) }
-        sidePanelSessionComponent?.onToggleSidebar()
+        val opening = !_state.value.isSidebarPresented
+        _state.update { it.copy(isSidebarPresented = opening) }
+        if (opening) sidePanelSessionComponent?.onSidebarOpened()
     }
 
     fun onSidebarDismissed() {
         _state.update { it.copy(isSidebarPresented = false) }
-        sidePanelSessionComponent?.onDismissSidebar()
-    }
-
-    /**
-     * Reopens the selected conversation in the chat thread and closes the drawer.
-     * Delegates to [SidePanelSessionComponent] which drives the chat component
-     * via the [onOpenConversation] callback.
-     */
-    fun onConversationSelected(conversation: ChatConversation) {
-        sidePanelSessionComponent?.onConversationSelected(conversation)
     }
 
     // ---- Composer intents -------------------------------------------------

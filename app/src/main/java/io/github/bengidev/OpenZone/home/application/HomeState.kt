@@ -1,6 +1,5 @@
 package io.github.bengidev.openzone.home.application
 
-import io.github.bengidev.openzone.chat.domain.ChatConversation
 import io.github.bengidev.openzone.home.domain.ComposerContextUsage
 import io.github.bengidev.openzone.home.domain.ComposerSpeedMode
 import io.github.bengidev.openzone.shared.externals.networking.ChatModel
@@ -42,7 +41,6 @@ data class HomeState(
     val modelFilterFreeOnly: Boolean = false,
     val isSettingsPresented: Boolean = false,
     val isSidebarPresented: Boolean = false,
-    val conversations: List<ChatConversation> = emptyList(),
     val isChatConfigured: Boolean = false,
     val hasApiKey: Boolean = false,
     val hasLoadedPreference: Boolean = false

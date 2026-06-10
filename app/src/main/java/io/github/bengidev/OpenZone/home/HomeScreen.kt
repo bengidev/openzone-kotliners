@@ -15,6 +15,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import io.github.bengidev.openzone.chat.presenter.ChatThreadView
 import io.github.bengidev.openzone.chat.theme.OpenZoneChatTheme
 import io.github.bengidev.openzone.home.application.HomeComponent

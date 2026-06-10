@@ -179,6 +179,25 @@ class ChatComponent(
         _state.update { it.copy(messages = emptyList(), isReasoningExpanded = false) }
     }
 
+    /**
+     * Resets the thread to a fresh empty conversation. Used when the active
+     * persisted conversation is deleted from the session sidebar.
+     */
+    fun startNewConversation() {
+        streamJob?.cancel()
+        streamJob = null
+        _state.update {
+            it.copy(
+                conversation = ChatState.defaultConversation(),
+                messages = emptyList(),
+                draft = "",
+                canSend = false,
+                status = ChatStreamingStatus.IDLE,
+                isReasoningExpanded = false
+            )
+        }
+    }
+
     fun onToggleReasoning() {
         _state.update { it.copy(isReasoningExpanded = !it.isReasoningExpanded) }
     }

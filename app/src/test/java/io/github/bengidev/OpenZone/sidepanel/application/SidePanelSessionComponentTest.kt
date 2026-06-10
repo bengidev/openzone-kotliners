@@ -16,103 +16,113 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class SidePanelSessionComponentTest {
 
-    private fun component(
-        store: InMemoryChatHistoryStore = InMemoryChatHistoryStore(),
-        scope: CoroutineScope,
-        onDelete: (ChatConversation) -> Unit = {}
-    ): SidePanelSessionComponent {
-        val lifecycle = LifecycleRegistry()
-        return SidePanelSessionComponent(
-            componentContext = DefaultComponentContext(lifecycle = lifecycle),
-            historyStore = store,
-            onDeleteConversationDelegate = onDelete,
-            mainScope = scope
-        )
-    }
+   private fun component(
+           store: InMemoryChatHistoryStore = InMemoryChatHistoryStore(),
+           scope: CoroutineScope,
+           ioDispatcher: kotlinx.coroutines.CoroutineDispatcher = UnconfinedTestDispatcher(),
+           onDelete: (ChatConversation) -> Unit = {}
+   ): SidePanelSessionComponent {
+      val lifecycle = LifecycleRegistry()
+      return SidePanelSessionComponent(
+              componentContext = DefaultComponentContext(lifecycle = lifecycle),
+              historyStore = store,
+              onDeleteConversationDelegate = onDelete,
+              ioDispatcher = ioDispatcher,
+              mainScope = scope
+      )
+   }
 
-    @Test
-    fun `onSidebarOpened loads conversations from store`() = runTest {
-        val scope = CoroutineScope(UnconfinedTestDispatcher(testScheduler))
-        val store = InMemoryChatHistoryStore()
-        store.upsertConversation(ChatConversation(id = "a", title = "Alpha", updatedAt = 2))
-        store.upsertConversation(ChatConversation(id = "b", title = "Beta", updatedAt = 1))
-        val component = component(store = store, scope = scope)
+   @Test
+   fun `onSidebarOpened loads conversations from store`() = runTest {
+      val dispatcher = UnconfinedTestDispatcher(testScheduler)
+      val scope = CoroutineScope(dispatcher)
+      val store = InMemoryChatHistoryStore()
+      store.upsertConversation(ChatConversation(id = "a", title = "Alpha", updatedAt = 2))
+      store.upsertConversation(ChatConversation(id = "b", title = "Beta", updatedAt = 1))
+      val component = component(store = store, scope = scope, ioDispatcher = dispatcher)
 
-        component.onSidebarOpened()
+      component.onSidebarOpened()
 
-        assertEquals(listOf("a", "b"), component.state.value.conversations.map { it.id })
-    }
+      assertEquals(listOf("a", "b"), component.state.value.conversations.map { it.id })
+   }
 
-    @Test
-    fun `search query filters conversations by title`() = runTest {
-        val scope = CoroutineScope(UnconfinedTestDispatcher(testScheduler))
-        val store = InMemoryChatHistoryStore()
-        store.upsertConversation(ChatConversation(id = "a", title = "Kotlin help"))
-        store.upsertConversation(ChatConversation(id = "b", title = "Swift help"))
-        val component = component(store = store, scope = scope)
-        component.onSidebarOpened()
+   @Test
+   fun `search query filters conversations by title`() = runTest {
+      val dispatcher = UnconfinedTestDispatcher(testScheduler)
+      val scope = CoroutineScope(dispatcher)
+      val store = InMemoryChatHistoryStore()
+      store.upsertConversation(ChatConversation(id = "a", title = "Kotlin help"))
+      store.upsertConversation(ChatConversation(id = "b", title = "Swift help"))
+      val component = component(store = store, scope = scope, ioDispatcher = dispatcher)
+      component.onSidebarOpened()
 
-        component.onSearchQueryChanged("kotlin")
+      component.onSearchQueryChanged("kotlin")
 
-        assertEquals(listOf("a"), component.state.value.filteredConversations.map { it.id })
-    }
+      assertEquals(listOf("a"), component.state.value.filteredConversations.map { it.id })
+   }
 
-    @Test
-    fun `pin toggles persisted flag and reloads list`() = runTest {
-        val scope = CoroutineScope(UnconfinedTestDispatcher(testScheduler))
-        val store = InMemoryChatHistoryStore()
-        val conversation = ChatConversation(id = "a", title = "Alpha", updatedAt = 2)
-        store.upsertConversation(conversation)
-        val component = component(store = store, scope = scope)
-        component.onSidebarOpened()
+   @Test
+   fun `pin toggles persisted flag and reloads list`() = runTest {
+      val dispatcher = UnconfinedTestDispatcher(testScheduler)
+      val scope = CoroutineScope(dispatcher)
+      val store = InMemoryChatHistoryStore()
+      val conversation = ChatConversation(id = "a", title = "Alpha", updatedAt = 2)
+      store.upsertConversation(conversation)
+      val component = component(store = store, scope = scope, ioDispatcher = dispatcher)
+      component.onSidebarOpened()
 
-        component.onPinConversation(conversation)
+      component.onPinConversation(conversation)
 
-        assertTrue(store.conversations["a"]?.isPinned == true)
-        assertTrue(component.state.value.conversations.first().isPinned)
-    }
+      assertTrue(store.conversations["a"]?.isPinned == true)
+      assertTrue(component.state.value.conversations.first().isPinned)
+   }
 
-    @Test
-    fun `rename ignores blank titles`() = runTest {
-        val scope = CoroutineScope(UnconfinedTestDispatcher(testScheduler))
-        val store = InMemoryChatHistoryStore()
-        val conversation = ChatConversation(id = "a", title = "Alpha")
-        store.upsertConversation(conversation)
-        val component = component(store = store, scope = scope)
+   @Test
+   fun `rename ignores blank titles`() = runTest {
+      val dispatcher = UnconfinedTestDispatcher(testScheduler)
+      val scope = CoroutineScope(dispatcher)
+      val store = InMemoryChatHistoryStore()
+      val conversation = ChatConversation(id = "a", title = "Alpha")
+      store.upsertConversation(conversation)
+      val component = component(store = store, scope = scope, ioDispatcher = dispatcher)
 
-        component.onRenameConversation(conversation, "   ")
+      component.onRenameConversation(conversation, "   ")
 
-        assertEquals("Alpha", store.conversations["a"]?.title)
-    }
+      assertEquals("Alpha", store.conversations["a"]?.title)
+   }
 
-    @Test
-    fun `delete removes conversation and notifies delegate`() = runTest {
-        val scope = CoroutineScope(UnconfinedTestDispatcher(testScheduler))
-        val store = InMemoryChatHistoryStore()
-        val conversation = ChatConversation(id = "a", title = "Alpha")
-        store.upsertConversation(conversation)
-        var deleted: ChatConversation? = null
-        val component = component(
-            store = store,
-            scope = scope,
-            onDelete = { deleted = it }
-        )
-        component.onSidebarOpened()
+   @Test
+   fun `delete removes conversation and notifies delegate`() = runTest {
+      val dispatcher = UnconfinedTestDispatcher(testScheduler)
+      val scope = CoroutineScope(dispatcher)
+      val store = InMemoryChatHistoryStore()
+      val conversation = ChatConversation(id = "a", title = "Alpha")
+      store.upsertConversation(conversation)
+      var deleted: ChatConversation? = null
+      val component =
+              component(
+                      store = store,
+                      scope = scope,
+                      ioDispatcher = dispatcher,
+                      onDelete = { deleted = it }
+              )
+      component.onSidebarOpened()
 
-        component.onDeleteConversation(conversation)
+      component.onDeleteConversation(conversation)
 
-        assertNull(store.conversations["a"])
-        assertEquals("a", deleted?.id)
-        assertTrue(component.state.value.conversations.isEmpty())
-    }
+      assertNull(store.conversations["a"])
+      assertEquals("a", deleted?.id)
+      assertTrue(component.state.value.conversations.isEmpty())
+   }
 
-    @Test
-    fun `setActiveConversationId updates highlight state`() = runTest {
-        val scope = CoroutineScope(UnconfinedTestDispatcher(testScheduler))
-        val component = component(scope = scope)
+   @Test
+   fun `setActiveConversationId updates highlight state`() = runTest {
+      val dispatcher = UnconfinedTestDispatcher(testScheduler)
+      val scope = CoroutineScope(dispatcher)
+      val component = component(scope = scope, ioDispatcher = dispatcher)
 
-        component.setActiveConversationId("active-id")
+      component.setActiveConversationId("active-id")
 
-        assertEquals("active-id", component.state.value.activeConversationId)
-    }
+      assertEquals("active-id", component.state.value.activeConversationId)
+   }
 }

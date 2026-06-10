@@ -33,21 +33,26 @@ class InMemoryChatHistoryStore : ChatHistoryStore {
 
     override suspend fun listConversations(): List<ChatConversation> =
         conversations.values.sortedWith(
-            compareByDescending<ChatConversation> { it.updatedAt }.thenByDescending { it.createdAt }
+            compareByDescending<ChatConversation> { it.isPinned }
+                .thenByDescending { it.updatedAt }
+                .thenByDescending { it.createdAt }
         )
 
     override suspend fun deleteConversation(conversationId: String) {
-        // No-op test double: the real Room store cascades on delete; this double
-        // intentionally does not mutate its in-memory maps so tests can assert
-        // call counts without observing side effects.
+        conversations.remove(conversationId)
+        messagesByConversation.remove(conversationId)
     }
 
     override suspend fun renameConversation(conversationId: String, title: String) {
-        // No-op test double: see [deleteConversation] for rationale.
+        conversations[conversationId]?.let { existing ->
+            conversations[conversationId] = existing.copy(title = title)
+        }
     }
 
     override suspend fun setPinned(conversationId: String, isPinned: Boolean) {
-        // No-op test double: see [deleteConversation] for rationale.
+        conversations[conversationId]?.let { existing ->
+            conversations[conversationId] = existing.copy(isPinned = isPinned)
+        }
     }
 
     fun messageIds(conversationId: String): List<String> =

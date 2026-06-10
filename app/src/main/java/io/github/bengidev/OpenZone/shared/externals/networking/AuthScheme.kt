@@ -1,4 +1,4 @@
-package io.github.bengidev.openzone.shared.networking
+package io.github.bengidev.openzone.shared.externals.networking
 
 /**
  * Authentication scheme a [ChatProvider] uses when issuing requests.

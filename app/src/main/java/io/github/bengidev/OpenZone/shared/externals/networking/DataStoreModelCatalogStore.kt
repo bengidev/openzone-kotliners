@@ -1,13 +1,10 @@
-package io.github.bengidev.openzone.settings.infrastructure
+package io.github.bengidev.openzone.shared.externals.networking
 
 import android.content.Context
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import io.github.bengidev.openzone.shared.networking.CachedCatalog
-import io.github.bengidev.openzone.shared.networking.ChatModel
-import io.github.bengidev.openzone.shared.networking.ModelCatalogStore
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json

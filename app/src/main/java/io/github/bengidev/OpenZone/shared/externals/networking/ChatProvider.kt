@@ -1,4 +1,4 @@
-package io.github.bengidev.openzone.shared.networking
+package io.github.bengidev.openzone.shared.externals.networking
 
 /**
  * Pure-data descriptor for a chat provider. Feature-neutral primitive shared

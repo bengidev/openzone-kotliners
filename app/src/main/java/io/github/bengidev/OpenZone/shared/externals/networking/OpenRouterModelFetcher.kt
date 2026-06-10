@@ -1,6 +1,5 @@
-package io.github.bengidev.openzone.settings.infrastructure
+package io.github.bengidev.openzone.shared.externals.networking
 
-import io.github.bengidev.openzone.shared.networking.ChatModel
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json

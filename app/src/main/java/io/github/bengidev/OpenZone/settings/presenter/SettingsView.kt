@@ -32,12 +32,12 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import io.github.bengidev.openzone.home.domain.ComposerReasoningLevel
-import io.github.bengidev.openzone.shared.networking.formatContextLength
+import io.github.bengidev.openzone.shared.externals.preference.ComposerReasoningLevel
+import io.github.bengidev.openzone.shared.externals.networking.formatContextLength
 import io.github.bengidev.openzone.settings.application.SettingsState
-import io.github.bengidev.openzone.shared.networking.ChatModel
+import io.github.bengidev.openzone.shared.externals.networking.ChatModel
 import io.github.bengidev.openzone.settings.theme.SettingsTheme
-import io.github.bengidev.openzone.shared.networking.ChatProvider
+import io.github.bengidev.openzone.shared.externals.networking.ChatProvider
 
 /**
  * Settings content surface. Lets the user paste an API key (stored encrypted,

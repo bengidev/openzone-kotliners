@@ -1,4 +1,4 @@
-package io.github.bengidev.openzone.settings.infrastructure
+package io.github.bengidev.openzone.shared.externals.preference
 
 import android.content.Context
 import androidx.datastore.core.DataStore
@@ -6,9 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import io.github.bengidev.openzone.home.domain.ComposerReasoningLevel
-import io.github.bengidev.openzone.shared.networking.ProviderPreference
-import io.github.bengidev.openzone.shared.networking.ProviderPreferenceStore
+import io.github.bengidev.openzone.shared.externals.security.MutableCredentialStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -20,7 +18,7 @@ import kotlinx.coroutines.flow.map
  * `DataStoreOnboardingRepository` pattern (interface in the shared seam,
  * concrete DataStore impl here).
  *
- * No secrets are stored here — the API key lives in [EncryptedCredentialStore].
+ * No secrets are stored here — the API key lives in [MutableCredentialStore].
  */
 class DataStoreProviderPreferenceStore(
     private val context: Context

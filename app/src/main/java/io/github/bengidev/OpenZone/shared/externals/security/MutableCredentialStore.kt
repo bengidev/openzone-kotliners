@@ -1,4 +1,6 @@
-package io.github.bengidev.openzone.shared.networking
+package io.github.bengidev.openzone.shared.externals.security
+
+import io.github.bengidev.openzone.shared.externals.security.CredentialStore
 
 /**
  * Read-write extension of [CredentialStore]. The Chat feature depends only on

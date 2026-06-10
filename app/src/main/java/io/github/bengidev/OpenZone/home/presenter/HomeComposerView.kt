@@ -61,7 +61,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.bengidev.openzone.home.application.HomeState
 import io.github.bengidev.openzone.home.domain.ComposerContextUsage
-import io.github.bengidev.openzone.home.domain.ComposerReasoningLevel
+import io.github.bengidev.openzone.shared.externals.preference.ComposerReasoningLevel
 import io.github.bengidev.openzone.home.domain.ComposerSpeedMode
 import io.github.bengidev.openzone.home.presenter.components.ComposerContextUsagePopover
 import io.github.bengidev.openzone.home.presenter.components.ComposerModelPopup

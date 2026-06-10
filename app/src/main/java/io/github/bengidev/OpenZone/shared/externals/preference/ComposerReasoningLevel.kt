@@ -1,4 +1,4 @@
-package io.github.bengidev.openzone.home.domain
+package io.github.bengidev.openzone.shared.externals.preference
 
 /**
  * Reasoning effort level for the composer. Mirrors iOS `ComposerReasoningLevel`.

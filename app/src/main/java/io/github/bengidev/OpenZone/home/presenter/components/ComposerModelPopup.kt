@@ -42,8 +42,8 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import io.github.bengidev.openzone.home.application.HomeState
 import io.github.bengidev.openzone.home.theme.HomeTheme
-import io.github.bengidev.openzone.shared.networking.formatContextLength
-import io.github.bengidev.openzone.shared.networking.ChatModel
+import io.github.bengidev.openzone.shared.externals.networking.formatContextLength
+import io.github.bengidev.openzone.shared.externals.networking.ChatModel
 
 /**
  * Composer model picker popup. Shown when the user taps the model chip in the

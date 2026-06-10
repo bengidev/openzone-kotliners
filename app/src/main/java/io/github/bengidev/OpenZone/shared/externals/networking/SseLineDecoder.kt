@@ -1,4 +1,4 @@
-package io.github.bengidev.openzone.shared.networking
+package io.github.bengidev.openzone.shared.externals.networking
 
 /**
  * Generic, transport-agnostic Server-Sent Events (SSE) line decoder.

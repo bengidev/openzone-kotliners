@@ -1,6 +1,4 @@
-package io.github.bengidev.openzone.settings.infrastructure
-
-import io.github.bengidev.openzone.shared.networking.ChatModel
+package io.github.bengidev.openzone.shared.externals.networking
 
 /**
  * Seam for fetching a provider's live model catalog. Implemented by

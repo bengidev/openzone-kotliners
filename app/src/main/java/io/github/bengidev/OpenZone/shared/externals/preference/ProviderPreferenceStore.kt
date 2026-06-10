@@ -1,6 +1,6 @@
-package io.github.bengidev.openzone.shared.networking
+package io.github.bengidev.openzone.shared.externals.preference
 
-import io.github.bengidev.openzone.home.domain.ComposerReasoningLevel
+import io.github.bengidev.openzone.shared.externals.preference.ComposerReasoningLevel
 import kotlinx.coroutines.flow.Flow
 
 /**

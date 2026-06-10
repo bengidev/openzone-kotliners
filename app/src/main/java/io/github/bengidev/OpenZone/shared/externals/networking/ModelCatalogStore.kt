@@ -1,4 +1,4 @@
-package io.github.bengidev.openzone.shared.networking
+package io.github.bengidev.openzone.shared.externals.networking
 
 /**
  * A point-in-time snapshot of a provider's model catalog, plus when it was

@@ -10,10 +10,10 @@ import io.github.bengidev.openzone.chat.infrastructure.wire.ChatCompletionReques
 import io.github.bengidev.openzone.chat.infrastructure.wire.WireErrorEnvelope
 import io.github.bengidev.openzone.chat.infrastructure.wire.WireMessage
 import io.github.bengidev.openzone.chat.infrastructure.wire.WireReasoning
-import io.github.bengidev.openzone.shared.networking.AuthScheme
-import io.github.bengidev.openzone.shared.networking.ChatProvider
-import io.github.bengidev.openzone.shared.networking.CredentialStore
-import io.github.bengidev.openzone.shared.networking.SseLineDecoder
+import io.github.bengidev.openzone.shared.externals.networking.AuthScheme
+import io.github.bengidev.openzone.shared.externals.networking.ChatProvider
+import io.github.bengidev.openzone.shared.externals.security.CredentialStore
+import io.github.bengidev.openzone.shared.externals.networking.SseLineDecoder
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow

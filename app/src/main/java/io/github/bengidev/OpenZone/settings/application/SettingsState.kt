@@ -1,8 +1,8 @@
 package io.github.bengidev.openzone.settings.application
 
-import io.github.bengidev.openzone.home.domain.ComposerReasoningLevel
-import io.github.bengidev.openzone.shared.networking.ChatModel
-import io.github.bengidev.openzone.shared.networking.ChatProvider
+import io.github.bengidev.openzone.shared.externals.preference.ComposerReasoningLevel
+import io.github.bengidev.openzone.shared.externals.networking.ChatModel
+import io.github.bengidev.openzone.shared.externals.networking.ChatProvider
 
 /**
  * UI state for the Settings surface. Holds no secret value — only whether a

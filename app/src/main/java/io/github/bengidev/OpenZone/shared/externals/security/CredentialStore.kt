@@ -1,4 +1,4 @@
-package io.github.bengidev.openzone.shared.networking
+package io.github.bengidev.openzone.shared.externals.security
 
 /**
  * Reads provider credentials at call time. Implementations are backed by

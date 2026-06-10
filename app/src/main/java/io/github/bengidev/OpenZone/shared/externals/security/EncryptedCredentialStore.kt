@@ -1,10 +1,9 @@
-package io.github.bengidev.openzone.settings.infrastructure
+package io.github.bengidev.openzone.shared.externals.security
 
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
-import io.github.bengidev.openzone.shared.networking.MutableCredentialStore
 
 /**
  * [MutableCredentialStore] backed by EncryptedSharedPreferences. The API key is

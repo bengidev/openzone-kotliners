@@ -19,10 +19,10 @@ import io.github.bengidev.openzone.home.application.HomeComponent
 import io.github.bengidev.openzone.onboarding.OnboardingScreen
 import io.github.bengidev.openzone.onboarding.application.OnboardingComponent
 import io.github.bengidev.openzone.onboarding.infrastructure.DataStoreOnboardingRepository
-import io.github.bengidev.openzone.settings.infrastructure.DataStoreModelCatalogStore
-import io.github.bengidev.openzone.settings.infrastructure.DataStoreProviderPreferenceStore
-import io.github.bengidev.openzone.settings.infrastructure.EncryptedCredentialStore
-import io.github.bengidev.openzone.settings.infrastructure.OpenRouterModelFetcher
+import io.github.bengidev.openzone.shared.externals.networking.DataStoreModelCatalogStore
+import io.github.bengidev.openzone.shared.externals.networking.OpenRouterModelFetcher
+import io.github.bengidev.openzone.shared.externals.preference.DataStoreProviderPreferenceStore
+import io.github.bengidev.openzone.shared.externals.security.EncryptedCredentialStore
 import io.github.bengidev.openzone.ui.theme.AppTheme
 import io.github.bengidev.openzone.ui.theme.LocalAppTheme
 import io.github.bengidev.openzone.ui.theme.OpenZoneTheme
@@ -42,7 +42,8 @@ class MainActivity : ComponentActivity() {
             applicationContext,
             ChatDatabase::class.java,
             ChatDatabase.DATABASE_NAME
-        ).build()
+        ).addMigrations(ChatDatabase.MIGRATION_1_2)
+            .build()
         val chatHistoryStore = RoomChatHistoryStore(chatDatabase.chatHistoryDao())
 
         val onboardingComponent = OnboardingComponent(

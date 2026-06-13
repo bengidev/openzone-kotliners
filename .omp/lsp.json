@@ -1,0 +1,14 @@
+{
+  "kotlin-lsp": {
+    "command": "kotlin-language-server",
+    "args": [],
+    "fileTypes": [".kt", ".kts"],
+    "rootMarkers": [
+      "build.gradle",
+      "build.gradle.kts",
+      "pom.xml",
+      "settings.gradle",
+      "settings.gradle.kts"
+    ]
+  }
+}

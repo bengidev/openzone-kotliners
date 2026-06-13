@@ -1,39 +1,97 @@
 # Chat Context
 
 | | |
-| --- | --- |
-| **Context** | Chat feature |
+|---|---|
+| **Context** | Chat feature - conversation and streaming |
 | **Code** | `chat/` |
-| **Map** | [CONTEXT-MAP.md](../../../CONTEXT-MAP.md) |
-| **Layout rules** | [docs/architecture/modules.md](../../architecture/modules.md) |
+| **Parent** | Home |
+| **Children** | None |
 
-The chat feature owns the live conversation workflow: composing a request, streaming the assistant response, rendering messages and reasoning, and surfacing stream errors.
+The Chat feature manages conversation threads, message streaming via SSE, and message persistence.
 
 ## Language
 
-- **Conversation** — a single chat thread (`ChatConversation`) and its ordered messages.
-- **Message** — one turn (`ChatMessage`), carrying a role and content.
-- **Model** — the selected AI model descriptor (`ChatModel`) used for a request.
-- **Request** — the outbound `ChatRequest` sent to the provider.
-- **Streaming event** — an incremental `ChatStreamingEvent` decoded from the wire.
-- **Stream error** — a terminal failure surfaced as `ChatStreamError`.
+- **ChatScreen**: Root composable for the chat feature
+- **ChatComponent**: Decompose component managing chat state and streaming
+- **ChatState**: State container for conversation and streaming status
+- **Streaming**: Server-sent events (SSE) for real-time message chunks
+- **Persistence**: Room database for message and conversation storage
+- **Wire models**: Data classes matching OpenAI API schema
 
 ## Architecture
 
-- State lives in `ChatState`; intents are methods on `ChatComponent`.
-- Streaming, persistence, and provider wiring run as effects from `ChatComponent`.
-- Value types: `ChatConversation`, `ChatMessage`, `ChatMessageRole`, `ChatRequest`, `ChatStreamingEvent`, `ChatStreamError`.
-- Infrastructure: `ChatAPIClient`, `OpenAiCompatibleStreamingClient`, `ChatHistoryStore`, `RoomChatHistoryStore`.
-- Views: `ChatThreadView`, `ChatMessageRowView`, `ChatReasoningCardView`, `ChatErrorBannerView`.
-- Persistence: `ChatDatabase` (Room), `ChatHistoryDao`, `ConversationEntity`, `MessageEntity`, `ChatMessageMapper`.
+### State Management
 
-## Boundaries
+`ChatComponent` owns `MutableValue<ChatState>`:
 
-- Chat domain types stay in `chat/`; do not move them to `shared/externals/`.
-- `OpenAiCompatibleStreamingClient` stays here because it combines provider wire behavior with chat domain types.
-- Reuse theme and UI primitives from `shared/ui` and `ui/theme`; reuse provider/credential adapters from `shared/externals/`.
-- Do not depend on other feature components directly; integrate through the app shell.
+```kotlin
+data class ChatState(
+    val conversationId: String,
+    val messages: List<ChatMessage>,
+    val streamingStatus: StreamingStatus,
+    val currentStream: String = "",
+    val isScrollToBottomEnabled: Boolean = true
+)
 
-## Relation to the side panel
+enum class StreamingStatus {
+    Idle, Streaming, Complete, Error
+}
+```
 
-Persisted conversations produced by this feature are listed and resumed from the side panel's session scope — see [SidePanel context](../sidepanel/SidePanel-CONTEXT.md). Chat owns the active thread; the side panel owns navigation across saved conversations.
+### Streaming Flow
+
+The Chat feature uses `OpenAiCompatibleStreamingClient` from `shared/externals/`:
+
+```kotlin
+fun streamMessage(request: ChatRequest) {
+    componentScope.launch {
+        streamingClient
+            .streamMessages(request)
+            .collect { chunk ->
+                when (chunk) {
+                    is Chunk.Delta -> state.value = state.value.copy(
+                        currentStream = state.value.currentStream + chunk.content
+                    )
+                    is Chunk.Done -> {
+                        // Persist complete message
+                        chatRepository.saveMessage(...)
+                        state.value = state.value.copy(
+                            messages = state.value.messages + completeMessage,
+                            streamingStatus = StreamingStatus.Complete
+                        )
+                    }
+                    is Chunk.Error -> {
+                        state.value = state.value.copy(
+                            streamingStatus = StreamingStatus.Error
+                        )
+                    }
+                }
+            }
+    }
+}
+```
+
+### Persistence Strategy
+
+- **Messages**: Persisted via `ChatRepository` (Room)
+- **Conversations**: Auto-created when first message sent
+- **Migrations**: `MIGRATION_1_2` adds `isPinned` and `lastUpdated` columns
+
+## Dependencies
+
+- **Upstream**: `shared.externals` (streaming client, credential store)
+- **Downstream**: None (leaf feature)
+- **Domain**: `ChatMessage`, `ChatRequest`, `Chunk` (pure Kotlin)
+- **Infrastructure**: `ChatRepository`, `ChatDatabase` (Room)
+
+## Constraints
+
+- Streaming must not persist incomplete messages to avoid data corruption
+- `componentScope` tied to component lifecycle for automatic cancellation
+- Wire models separate from domain models for clean persistence
+
+## Key Decisions
+
+- **SSE over WebSocket**: Simpler protocol, matches OpenAI API
+- **Room over SQLite direct**: Type-safe queries, migration support
+- **Factory pattern**: `ChatComponent.Factory` for dependency injection and testing

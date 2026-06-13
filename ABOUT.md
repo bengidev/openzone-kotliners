@@ -1,44 +1,33 @@
 # About OpenZone Kotliners
 
 ## What it is
-
-OpenZone Kotliners is a native Android AI assistant app built with Kotlin and Jetpack Compose. It is designed to connect Android-native UX with AI models so users can complete practical tasks from their phone.
+OpenZone Kotliners is a native Android AI assistant app built with Kotlin and Jetpack Compose. It is designed to connect Android-native UX with AI models so users can complete practical tasks — drafting, summarizing, planning, Q&A — directly from their device.
 
 ## Vision
-
-Make AI assistance feel natural, fast, private, and useful on Android — focused on real work such as drafting, summarizing, planning, Q&A, and contextual help.
+Make capable AI assistance feel native, fast, and private on Android — focused on real work rather than generic chatbot Q&A.
 
 ## Why "Kotliners"
-
-"Kotliners" reflects the Android/Kotlin variant of the OpenZone mobile AI assistant family, paired with OpenZone Swifters for iOS.
+Built end-to-end with Google's modern stack — Jetpack Compose for the interface, Room + DataStore for local-first persistence — by and for Kotlin developers who value native performance and platform integration. Paired with OpenZone Swifters for iOS.
 
 ## Core Principles
 
-- **Native first** — full Kotlin and Jetpack Compose, no web wrappers.
-- **Local-first data** — designed to store history and context on-device.
-- **Model-flexible** — pluggable AI provider layer for local and remote models.
-- **Privacy-aware** — keep sensitive data on the device whenever possible.
-- **Safe by default** — secure configuration and no hard-coded secrets.
+- **Native first** — full Kotlin + Jetpack Compose, no web wrappers.
+- **Local-first data** — Room + DataStore store history and context on-device.
+- **Model-flexible** — pluggable AI provider layer for on-device and remote models (OpenRouter, OpenAI-compatible APIs).
+- **Privacy-aware** — keep sensitive data on the device; AES-256 encrypted credential storage.
+- **Safe by default** — call-time credential read, no hard-coded secrets, no leaked API keys.
 
 ## Category
-
-Productivity / AI Assistant / Native Android
+Classified as a **Productivity** app.
 
 ## Status
-
-Early-stage Android scaffold.
+Early-stage Android scaffold. Streaming chat is functional with OpenRouter as the initial provider.
 
 ## Documentation
-
-- [README.md](README.md) — build, project structure, CI
-- [CONTEXT-MAP.md](CONTEXT-MAP.md) — domain contexts (multi-context glossaries)
-- [docs/](docs/) — agent workflow config, ADRs, contributing pointers
-- [AGENTS.md](AGENTS.md) — conventions for AI-assisted development
+Product and engineering docs live in the repo: [README.md](README.md), [CONTEXT-MAP.md](CONTEXT-MAP.md), [docs/architecture/](docs/architecture/), and [AGENTS.md](AGENTS.md) for automated agent conventions.
 
 ## Author
-
-[bengidev](https://github.com/bengidev)
+**Bambang Tri Rahmat Doni** ([@bengidev](https://github.com/bengidev))
 
 ## License
-
-MIT
+MIT — see [LICENSE](LICENSE).

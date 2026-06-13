@@ -1,35 +1,109 @@
-# Side Panel — Setting Scope
+# SidePanel Setting Context
 
 | | |
-| --- | --- |
-| **Context** | Side panel → setting scope |
-| **Code** | `sidepanel/` (`SidePanelSetting…` symbols) |
-| **Parent** | [SidePanel context](./SidePanel-CONTEXT.md) |
-| **Map** | [CONTEXT-MAP.md](../../../CONTEXT-MAP.md) |
-| **Layout rules** | [docs/architecture/modules.md](../../architecture/modules.md) |
+|---|---|
+| **Context** | SidePanel Setting - app preferences and configuration |
+| **Code** | `sidepanel/application/SidePanelSettingComponent.kt` |
+| **Parent** | SidePanel |
+| **Children** | None |
 
-The setting scope is the app-preferences surface inside the side panel. It migrates from the former standalone `settings/` feature; in the current Android implementation, `SettingsComponent` + `SettingsScreen` still live in `settings/` and will be migrated to `SidePanelSettingComponent` + `SidePanelSettingScreen` in the `sidepanel/` module.
+The SidePanel Setting scope manages app-wide preferences and settings.
+
+**Migration status**: In progress. Legacy `SettingsComponent` currently active in `settings/` package. Target: `SidePanelSettingComponent` in `sidepanel/setting/` subdirectory.
 
 ## Language
 
-- **Setting** — an adjustable app-wide preference (theme, provider, credential entry points).
-- **Setting surface** — the rendered preferences view inside the side panel.
+- **SidePanelSettingComponent**: Decompose component for settings (target state)
+- **SettingsComponent**: Legacy component in `settings/` package (currently active)
+- **SettingsState**: State container for app preferences
+- **Preference store**: DataStore-backed persistence for user preferences
+- **Credential store**: Encrypted storage for API keys
 
 ## Architecture
 
-- State will live in the setting scope's component (`SidePanelSettingComponent`); intents are its methods.
-- Preference reads/writes go through `shared/externals/` interfaces (`MutableCredentialStore`, `ProviderPreferenceStore`) and the shared theme preference — never direct persistence from views.
-- The setting view will render the setting surface from the component state.
+### State Management
 
-## Naming convention
+`SidePanelSettingComponent` (target) will own `MutableValue<SettingsState>`:
 
-All setting-scope symbols and files use the `SidePanelSetting` prefix, then a role suffix per the [file-naming rules](../../architecture/modules.md) — e.g. `SidePanelSettingComponent` (component).
+```kotlin
+data class SettingsState(
+    val selectedProvider: String = "openrouter",
+    val apiKey: String = "",
+    val defaultModel: String = "gpt-4",
+    val reasoningLevel: ReasoningLevel = ReasoningLevel.Medium,
+    val isApiKeyValid: Boolean = false
+)
 
-## Migration note
+enum class ReasoningLevel {
+    Low, Medium, High
+}
+```
 
-This scope supersedes the former standalone `settings/` feature. `SidePanelSettingComponent` has been created as the target; `SettingsComponent` / `SettingsView` continue to exist in `settings/` during the transition.
+### Dependency Injection
 
-## Boundaries
+Settings depend on multiple externals:
 
-- Owns app preferences presentation only. Secure credential storage and provider preference persistence stay in `shared/externals/`.
-- Reuse theme and UI primitives from `shared/ui` and `ui/theme`.
+```kotlin
+class SidePanelSettingComponent(
+    context: ComponentContext,
+    private val credentialStore: CredentialStore,
+    private val preferenceStore: PreferenceStore,
+    private val modelRepository: ModelRepository
+) : ComponentContext by context {
+    
+    fun saveApiKey(apiKey: String) {
+        componentScope.launch {
+            credentialStore.storeApiKey(apiKey)
+            state.value = state.value.copy(
+                apiKey = apiKey,
+                isApiKeyValid = credentialStore.validateApiKey(apiKey)
+            )
+        }
+    }
+    
+    fun updatePreferences(preferences: UserPreferences) {
+        componentScope.launch {
+            preferenceStore.savePreferences(preferences)
+            state.value = state.value.copy(
+                selectedProvider = preferences.provider,
+                defaultModel = preferences.model,
+                reasoningLevel = preferences.reasoningLevel
+            )
+        }
+    }
+}
+```
+
+### UI Structure
+
+Settings UI is a form-based layout with sections:
+
+- **Provider Configuration**: API key entry, provider selection
+- **Model Preferences**: Default model, reasoning level
+- **Account**: API key validation status, logout
+
+## Dependencies
+
+- **Upstream**: `shared.externals` (credential store, preference store, model repository)
+- **Downstream**: None (leaf feature)
+- **Domain**: `UserPreferences`, `ReasoningLevel` (pure Kotlin)
+
+## Constraints
+
+- API keys must be validated before saving
+- Credentials stored via `EncryptedCredentialStore` (AES-256)
+- Changes persist immediately to prevent data loss
+
+## Migration Plan
+
+1. Create `sidepanel/setting/` subdirectory structure
+2. Implement `SidePanelSettingComponent` with same functionality as `SettingsComponent`
+3. Update `HomeComponent` to inject `SidePanelSettingComponent.Factory`
+4. Deprecate `settings/` package
+5. Remove legacy code after verification
+
+## Key Decisions
+
+- **EncryptedSharedPreferences**: Industry-standard encryption for sensitive data
+- **Immediate persistence**: Prevents user confusion about unsaved changes
+- **Factory pattern**: Enables dependency injection and testing

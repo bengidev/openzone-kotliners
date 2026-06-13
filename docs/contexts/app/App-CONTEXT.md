@@ -1,28 +1,72 @@
-# App Shell Context
+# App Context
 
 | | |
-| --- | --- |
-| **Context** | OpenZone app shell |
-| **Code** | `io.github.bengidev.openzone` (root app package sources outside feature packages) |
-| **Map** | [CONTEXT-MAP.md](../../../CONTEXT-MAP.md) |
-| **Layout rules** | [docs/architecture/modules.md](../../architecture/modules.md) |
+|---|---|
+| **Context** | App shell and routing |
+| **Code** | `MainActivity.kt` and root-level theme |
 
-The app shell owns entry-point wiring, global routing, and coordination between features.
+The app shell provides the entry point, global routing, and feature composition.
 
-## Language
+## Structure
 
-- **App shell** — `MainActivity`, root Decompose `ComponentContext`, and routing that decides which top-level screen is shown.
-- **Root component** — root `HomeComponent` that composes child feature components and handles cross-feature routing.
+```
+io.github.bengidev.openzone/
+├── MainActivity.kt              # Composition root + routing
+├── ui/theme/
+│   ├── Palette.kt              # iOS-faithful graphite palette
+│   ├── Typography.kt           # App typography
+│   └── Theme.kt                # Material theme wrapper
+└── (feature packages)
+```
 
-The shell does not have a dedicated component; routing decisions live in `MainActivity`.
+## Responsibilities
 
-## Architecture
+1. **Composition root**: `MainActivity` instantiates infrastructure dependencies (Room DB, DataStore, credential store) and injects them into the root component
+2. **Global routing**: Manages navigation between top-level features (Onboarding ↔ Home ↔ Chat)
+3. **Theme provision**: Wraps the app in `OpenZoneTheme` for consistent styling
+4. **Lifecycle management**: Uses `lifecycleScope` for app-level coroutines
 
-- The shell creates dependencies (Room database, DataStore, EncryptedSharedPreferences) and passes them into feature components via constructor injection.
-- Onboarding completion is observed by the shell to switch from onboarding to main content.
-- Feature-specific logic stays in feature packages; only cross-cutting routing belongs here.
+## Decompose Integration
 
-## Boundaries
+The app shell creates a `ComponentContext` and passes it to the root `HomeComponent`:
 
-- Do not put feature-specific domain language or components in the shell.
-- Shared theme and UI come from `shared/ui` and `ui/theme`; external adapters from `shared/externals/`; feature UI from each feature's package.
+```kotlin
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        val componentContext = DefaultComponentContext(lifecycle.asDecomposeLifecycle())
+        val rootComponent = HomeComponent(componentContext, /* dependencies */)
+        
+        setContent {
+            OpenZoneTheme {
+                HomeScreen(rootComponent)
+            }
+        }
+    }
+}
+```
+
+## Routing Strategy
+
+- **Onboarding → Home**: After onboarding completes, switch to Home
+- **Home → Chat**: User selects a conversation
+- **Chat → Home**: User returns via back navigation
+- **Any → Settings**: Overlay presentation managed by Home
+
+## Key Decisions
+
+- **Single Activity pattern**: All navigation handled within `MainActivity` using Compose and Decompose
+- **Manual DI**: Currently using constructor injection without Hilt; promotes explicit dependency tracking
+- **Theme at root**: `OpenZoneTheme` wraps entire app for consistent Material 3 styling
+- **Lifecycle binding**: Uses `lifecycle.asDecomposeLifecycle()` to sync Decompose with Android lifecycle
+
+## Constraints
+
+- `domain/` layer must remain pure Kotlin (no Android SDK imports)
+- `application/` layer uses Decompose + Coroutines (Android-aware but UI-agnostic)
+- `infrastructure/` layer contains Android-specific implementations
+- `presenter/` layer is Compose-only, observes component state
+
+## Future Considerations
+
+- May migrate to Hilt for DI as complexity grows
+- Settings currently uses legacy `SettingsComponent`; target: `SidePanelSettingComponent` (see migration plan)

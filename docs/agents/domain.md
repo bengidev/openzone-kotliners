@@ -8,22 +8,45 @@ OpenZone uses a **multi-context** layout. Start at the repo root:
 
 1. Read **`CONTEXT-MAP.md`** to see which contexts exist and where their glossaries live.
 2. Open the **`CONTEXT.md`** for the area you are changing.
-3. Read **`docs/adr/`** for system-wide architectural decisions. For context-specific ADRs, check `<context-path>/docs/adr/` when that directory exists.
+3. Read **`docs/adr/`** for system-wide architectural decisions.
+4. Read **`docs/architecture/modules.md`** — read this before changing feature boundaries, shared UI/theme code, or Decompose component structure.
+5. Read **`docs/architecture/coroutine-concurrency.md`** — read this before changing Kotlin code that touches concurrency, dispatcher choice, flows, or persistence.
 
-If any of these files or directories are missing, **proceed silently**. Do not block work or insist on creating them up front. Add glossary entries and ADRs when terms or decisions actually stabilize (e.g. via `/real-engineer-grill-with-docs`).
+If any of these files don't exist, **proceed silently**. Don't flag their absence; don't suggest creating them upfront. Glossaries and ADRs are added lazily when terms or decisions actually get resolved.
 
 ## Expected file structure
 
 ```text
 /
-├── CONTEXT-MAP.md                       # Index of contexts → CONTEXT.md paths
-├── docs/adr/                            # System-wide ADRs
-└── app/
-    ├── CONTEXT.md                       # App module: shell, navigation, shared theme
-    └── src/main/java/io/github/bengidev/openzone/
-        └── onboarding/
-            ├── CONTEXT.md               # Onboarding domain language (when added)
-            └── docs/adr/                # Onboarding-specific ADRs (when added)
+├── CONTEXT-MAP.md                              # Index of contexts → CONTEXT.md paths
+├── docs/
+│   ├── adr/                                    # System-wide ADRs
+│   ├── architecture/
+│   │   ├── modules.md                          # Module & package layout rules
+│   │   └── coroutine-concurrency.md            # Kotlin coroutine & dispatcher rules
+│   ├── agents/
+│   │   ├── issue-tracker.md                    # gh CLI conventions
+│   │   ├── triage-labels.md                    # Triage label vocabulary
+│   │   └── domain.md                           # This file
+│   └── contexts/
+│       ├── app/App-CONTEXT.md
+│       ├── home/Home-CONTEXT.md
+│       ├── chat/Chat-CONTEXT.md
+│       ├── onboarding/Onboarding-CONTEXT.md
+│       ├── sidepanel/
+│       │   ├── SidePanel-CONTEXT.md
+│       │   ├── SidePanelSession-CONTEXT.md
+│       │   └── SidePanelSetting-CONTEXT.md
+│       ├── externals/Externals-CONTEXT.md
+│       └── shared/Shared-CONTEXT.md
+└── app/src/main/java/io/github/bengidev/openzone/
+    ├── MainActivity.kt
+    ├── onboarding/
+    ├── home/
+    ├── chat/
+    ├── sidepanel/
+    ├── shared/
+    └── ui/theme/
 ```
 
 ## Use the glossary's vocabulary
@@ -36,4 +59,4 @@ If the concept is not in the glossary, either reconsider the naming or note the 
 
 If output contradicts an existing ADR, surface it explicitly rather than silently overriding:
 
-> _Contradicts ADR-0007 (example title) — worth reopening because…_
+> *Contradicts ADR-0001 (shared cross-cutting infra) — worth reopening because…*

@@ -20,16 +20,29 @@ shared/externals/
 
 - **AI provider** — a `ChatProvider` descriptor (endpoint, auth scheme, default headers).
 - **Provider preference** — persisted provider id, model id, and reasoning tier (`ProviderPreference`).
-- **Reasoning level** — the `ComposerReasoningLevel` enum mapped to `reasoning.effort` on the wire.
+- **Reasoning level** — the closed `ComposerReasoningLevel` enum mapped to `reasoning.effort` on the wire.
 - **Credential store** — secure storage for the provider API secret (`CredentialStore` / `MutableCredentialStore`).
+- **Model catalog store** — the cached live list of models from a provider (`ModelCatalogStore`), with `DataStoreModelCatalogStore` as the persistent implementation.
+
+## Built-in AI providers
+
+Shipped backends are values in `ChatProviders` in `chat/infrastructure/`. Currently only one provider is built-in:
+
+| ID | Display name | Base URL |
+| --- | --- | --- |
+| `openrouter` | OpenRouter | `https://openrouter.ai/api/v1` |
+
+Chat domain types (e.g., `ChatConversation`) belong in `chat/domain/` rather than here. Provider orchestration clients live in `chat/infrastructure/` or `shared/externals/` when truly cross-cutting. This mirrors the iOS layout where feature clients stay feature-scoped.
 
 ## Architecture
 
 - Externals code must not import or reference feature UI or component code.
-- Feature domain types (e.g. `ChatMessage`) belong in feature packages.
+- Feature domain types belong in feature packages.
 - Feature orchestration clients belong in the owning feature's package.
 - Same app target today — package boundaries are the contract until promoted to a library module.
 
 ## Dependency injection
 
-Externals exposes interfaces (`CredentialStore`, `ProviderPreferenceStore`) and concrete implementations (`EncryptedCredentialStore`, `DataStoreProviderPreferenceStore`) that features wire together in `MainActivity`.
+Externals exposes interfaces (`CredentialStore`, `ProviderPreferenceStore`, `ModelCatalogStore`) and concrete implementations (`EncryptedCredentialStore`, `DataStoreProviderPreferenceStore`, `DataStoreModelCatalogStore`) that features wire together in `MainActivity`.
+
+Features do not depend on implementations — they depend on interfaces. The app shell (`MainActivity`) is the composition root that creates implementations and injects them into feature components via constructors.

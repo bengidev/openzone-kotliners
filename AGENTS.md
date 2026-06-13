@@ -1,70 +1,53 @@
 # AGENTS.md
 
-## Agent skills
+Conventions for AI-assisted development on this project.
 
-Project agents should preserve the native Android direction and keep AI provider implementation separated from UI code.
+## Agent skill usage
 
-### Package structure
+- **/tdd**: run unit tests via `./gradlew :app:testDebugUnitTest`; instrumented via `./gradlew connectedDebugAndroidTest`
+- **/grill-me**: use with domain vocabulary from CONTEXT files; verify against [docs/architecture/modules.md](docs/architecture/modules.md)
+- **/diagnose**: reproduce via Compose previews, emulator logs, Room Inspector; prefer minimal repro
+- **/improve-codebase-architecture**: preserve feature-neutral externals (see ADR-0001). Do not merge feature packages without explicit plan
 
-The project follows a feature-oriented internal-package layout mirroring iOS OpenZone:
+## Architecture rules
 
-```
-io.github.bengidev.openzone/
-├── MainActivity.kt
-├── onboarding/          # OnboardingComponent, pages, visuals, persistence
-├── home/                # HomeComponent, composer, model popup, particle orb
-├── chat/                # ChatComponent, streaming, history persistence
-├── sidepanel/           # SidePanel session + setting sub-scopes
-├── settings/            # DEPRECATED — migrating to sidepanel/
-├── shared/
-│   ├── externals/       # Feature-neutral adapters (Networking, Preference, Security)
-│   └── ui/              # Shared UI primitives
-└── ui/theme/            # Palette, Typography, AppTheme
-```
+Follow the layered package structure defined in [docs/architecture/modules.md](docs/architecture/modules.md):
 
-### Feature layering
+1. **Feature packages** use `domain/`, `application/`, `infrastructure/`, `presenter/`, `theme/` layering
+2. **`domain/` must remain pure Kotlin** — no Android SDK, no Compose, no Decompose imports
+3. **`application/` uses Decompose + MutableValue** for state management, not ViewModels
+4. **`shared/externals/` is feature-neutral** — never import feature packages
+5. **Dependency direction**: features → shared, never the reverse
 
-Each feature package uses domain/application/infrastructure/presenter/theme sub-packages:
+## State management
 
-- **domain** — models only; no Android or Compose imports
-- **application** — Decompose components and state; depends on interfaces, not concrete storage
-- **infrastructure** — concrete storage implementations (Room, DataStore, EncryptedSharedPreferences)
-- **presenter** — Compose UI; talks to components, not persistence
-- **theme** — feature design tokens
+- Use Decompose `MutableValue<State>` in components, mirrored after iOS TCA reducer pattern
+- Intent methods are the only way to mutate state via `state.value = state.value.copy(...)`
+- Child components are created by parent via factory pattern
+- Compose views observe state with `subscribeAsState()` or `collectAsState()`
 
-### `shared/externals/` package
+## Coroutines
 
-Feature-neutral adapters for external systems. Mirrors iOS `OpenZone/Externals/`:
+See [docs/architecture/coroutine-concurrency.md](docs/architecture/coroutine-concurrency.md) for dispatcher choice, flow rules, SSE streaming, and persistence rules.
 
-- `networking/` — `ChatProvider`, `AuthScheme`, `SseLineDecoder`, `ChatModel`, `ModelCatalogStore`
-- `security/` — `CredentialStore`, `MutableCredentialStore`, `EncryptedCredentialStore`
-- `preference/` — `ComposerReasoningLevel`, `ProviderPreference`, `ProviderPreferenceStore`
+## iOS parity goals
 
-Externals code MUST be feature-neutral — no imports from `chat/`, `home/`, `onboarding/`, `sidepanel/`. MUST stay free of Compose types.
+- Preserve iOS-faithful palette (`OpenZonePalette` — graphite monochrome, no blue accents)
+- Do not introduce HStack/VStack-style Compose idioms that diverge from the iOS layout language
+- Port visual treatments 1:1 where possible; document divergences in the relevant context file
 
-### Side panel architecture
+## Issue tracker
 
-The side panel is one module (`sidepanel/`) hosting two sub-scopes:
+GitHub Issues on `bengidev/openzone-kotliners`. See [docs/agents/issue-tracker.md](docs/agents/issue-tracker.md) for `gh` CLI conventions.
 
-- **Session** (`SidePanelSession*`) — saved-conversation browser, supersedes old `HomeSidebarView`
-- **Setting** (`SidePanelSetting*`) — app preferences, supersedes old `SettingsComponent`
+## Triage labels
 
-Old `settings/` and `home/presenter/HomeSidebarView.kt` are deprecated and targeted for removal once the migration is complete.
+Five canonical roles mapped 1:1 to label strings of the same name. See [docs/agents/triage-labels.md](docs/agents/triage-labels.md).
 
-### Onboarding (internal module)
+## Domain docs
 
-Onboarding lives under `onboarding/` as an internal feature package, not a standalone Gradle module.
+Multi-context: [CONTEXT-MAP.md](CONTEXT-MAP.md) points to per-context `CONTEXT.md` files in `docs/contexts/`; system-wide ADRs in [docs/adr/](docs/adr/); module layout rules in [docs/architecture/modules.md](docs/architecture/modules.md). See [docs/agents/domain.md](docs/agents/domain.md).
 
-Preserve the existing layering when changing onboarding. Do not reintroduce a separate `:onboarding` library module unless the team explicitly decides to extract and publish it.
+## Deprecated packages
 
-### Issue tracker
-
-GitHub Issues on `bengidev/openzone-kotliners`. See `docs/agents/issue-tracker.md`.
-
-### Triage labels
-
-Five canonical roles mapped 1:1 to label strings of the same name. See `docs/agents/triage-labels.md`.
-
-### Domain docs
-
-Multi-context: `CONTEXT-MAP.md` at the repo root points to per-context `CONTEXT.md` files in `docs/contexts/`; system-wide ADRs in `docs/adr/`; module layout rules in `docs/architecture/modules.md`. See `docs/agents/domain.md`.
+The `settings/` package is deprecated — being migrated to `sidepanel/` package. `SidePanelSettingComponent` exists as migration target but old `SettingsComponent` + `SettingsView` remain active.

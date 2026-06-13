@@ -7,15 +7,15 @@
 | **Parent** | App shell |
 | **Children** | None |
 
-The Onboarding feature guides new users through initial setup before they can access the main app.
+The Onboarding feature is the first-run product tour. It shows interactive visual demos, persists a completion flag, and then hands control to Home. Provider/model/API-key setup happens later in Settings/Home, not inside onboarding.
 
 ## Language
 
 - **OnboardingScreen**: Root composable for the onboarding feature
-- **OnboardingComponent**: Decompose component managing onboarding flow
-- **OnboardingState**: State container for onboarding progress
-- **Pages**: Sequential setup screens (welcome, provider setup, API key, etc.)
-- **Repository**: Persistence layer for onboarding flags
+- **OnboardingComponent**: Decompose component managing page navigation and completion
+- **OnboardingState**: State container for current page index, completion, and demo state
+- **Pages**: `EncryptedPairing`, `IdeaStudio`, `PromptQueue`, `ReasoningControl`, `WorkspaceReady`
+- **Repository**: Persistence layer for the onboarding completion flag
 
 ## Architecture
 
@@ -25,14 +25,21 @@ The Onboarding feature guides new users through initial setup before they can ac
 
 ```kotlin
 data class OnboardingState(
-    val currentPage: Page,
-    val providerSelection: ProviderSelection?,
-    val apiKeyInput: String = "",
-    val isComplete: Boolean = false
-)
+    val currentPage: Int = 0,
+    val isFinished: Boolean = false,
+    val demoState: DemoState = DemoState()
+) {
+    val pages: List<OnboardingPage> = OnboardingPage.all
+    val totalPages: Int get() = pages.size
+    val isLastPage: Boolean get() = currentPage >= totalPages - 1
+}
 
-enum class Page {
-    Welcome, ProviderSetup, ApiKeyEntry, ModelSelection, Complete
+enum class OnboardingPageType {
+    EncryptedPairing,
+    IdeaStudio,
+    PromptQueue,
+    ReasoningControl,
+    WorkspaceReady
 }
 ```
 
@@ -41,50 +48,42 @@ enum class Page {
 Onboarding uses a repository interface for persistence:
 
 ```kotlin
-// domain/
+// onboarding/infrastructure/
 interface OnboardingRepository {
-    suspend fun isOnboardingComplete(): Boolean
-    suspend fun markOnboardingComplete()
+    suspend fun isOnboardingCompleted(): Boolean
+    suspend fun completeOnboarding()
 }
 
-// infrastructure/
-class DataStoreOnboardingRepositoryImpl(
-    private val dataStore: DataStore<Preferences>
-) : OnboardingRepository {
-    override suspend fun isOnboardingComplete(): Boolean =
-        dataStore.data.first()[IS_ONBOARDING_COMPLETE] ?: false
-    
-    override suspend fun markOnboardingComplete() {
-        dataStore.edit { it[IS_ONBOARDING_COMPLETE] = true }
-    }
-}
+class DataStoreOnboardingRepository(
+    private val context: Context
+) : OnboardingRepository
 ```
 
 ### Flow Structure
 
-Onboarding is a linear flow with back navigation:
+Onboarding is a linear product-tour flow with back navigation and optional skip-to-last-page behavior:
 
 ```
-Welcome → Provider Setup → API Key Entry → Model Selection → Complete
+EncryptedPairing → IdeaStudio → PromptQueue → ReasoningControl → WorkspaceReady
 ```
 
-Each page validates before allowing progression.
+Progression does not validate credentials. `onFinishTapped()` persists completion and triggers the app shell's `onComplete` callback.
 
 ## Dependencies
 
-- **Upstream**: `shared.externals` (credential store, preference store)
+- **Upstream**: None beyond Android/Compose/DataStore support
 - **Downstream**: None (leaf feature)
-- **Domain**: `OnboardingRepository` interface (pure Kotlin)
-- **Infrastructure**: `DataStoreOnboardingRepositoryImpl`
+- **Domain**: `OnboardingPage`, `OnboardingPageType`, demo value models
+- **Infrastructure**: `OnboardingRepository`, `DataStoreOnboardingRepository`
 
 ## Constraints
 
-- Onboarding must complete before Home is accessible
-- API key validation before progression to prevent broken state
-- No caching of sensitive credentials in memory
+- Onboarding must complete before Home is accessible.
+- Onboarding must not store provider credentials or model preferences.
+- Demo state is local UI state; only completion is persisted.
 
 ## Key Decisions
 
-- **DataStore over SharedPreferences**: Modern async API, type-safe
-- **Repository abstraction**: Swap implementations without changing component
-- **Linear flow**: Prevents user confusion, ensures setup completeness
+- **DataStore over SharedPreferences**: Modern async API, type-safe.
+- **Repository abstraction**: Swap persistence without changing component.
+- **Visual tour only**: Provider setup remains in Settings/Home so onboarding stays lightweight.

@@ -176,7 +176,13 @@ class ChatComponent(
 
     fun onClearThread() {
         if (_state.value.isStreaming) return
-        _state.update { it.copy(messages = emptyList(), isReasoningExpanded = false) }
+        resetToNewConversation()
+    }
+
+    fun resetToNewConversation() {
+        streamJob?.cancel()
+        streamJob = null
+        _state.update { ChatState() }
     }
 
     fun onToggleReasoning() {

@@ -11,7 +11,6 @@ The side panel is the single navigation surface that slides in alongside the mai
 
 ```text
 sidepanel/
-├── SidePanelScreen.kt                  # Overlay container
 ├── domain/
 │   └── SidePanelSessionSection.kt      # Recency/pin grouping (Pinned/Today/Yesterday/7Days/30Days/Older)
 ├── application/
@@ -50,5 +49,5 @@ All symbols and files in this module carry the `SidePanel` scope prefix, and the
 ## Boundaries
 
 - The side panel owns navigation across saved conversations and app settings; it does not own the live chat stream (Chat) or the landing composer (Home).
-- Reuse theme and UI primitives from `shared/ui` and `ui/theme`; reuse provider/credential/preference adapters from `shared/externals/`.
+- Reuse theme from `ui/theme`; reuse provider/credential/preference adapters from `shared/externals/`.
 - Do not depend on other feature components directly; integrate through the app shell.

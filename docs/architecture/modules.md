@@ -53,18 +53,18 @@ io.github.bengidev.openzone/
 ├── sidepanel/                         # Side panel (session + setting sub-scopes)
 │   ├── domain/                        # SidePanelSessionSection (Pinned/Today/Yesterday/7Days/30Days/Older)
 │   ├── application/                   # SidePanelSessionComponent, SidePanelSettingComponent
-│   └── presenter/                     # SidePanelScreen, SidePanelSessionSidebarView
+│   └── presenter/                     # SidePanelSessionSidebarView
 ├── settings/                          # DEPRECATED: migrating to sidepanel/setting/
 │   ├── domain/                        # ModelCatalog (curated fallback list + defaultModelId)
 │   ├── application/                   # SettingsState, SettingsComponent (currently active in HomeComponent)
-│   ├── presenter/                     # SettingsView, ApiKeyField/ModelPicker/ProviderPicker/ReasoningLevelSelector
-│   └── theme/                         # SettingsColorScheme/Theme
+│   ├── presenter/                     # SettingsView
+│   └── theme/                         # SettingsTheme
 ├── shared/
 │   ├── externals/                     # Feature-neutral adapters (Networking, Preference, Security)
 │   │   ├── networking/                # ChatProvider, AuthScheme, SseLineDecoder, ChatModel, ModelCatalogStore, OpenRouterModelFetcher
 │   │   ├── preference/                # ComposerReasoningLevel, ProviderPreference, ProviderPreferenceStore, DataStoreProviderPreferenceStore
 │   │   └── security/                  # CredentialStore, MutableCredentialStore, EncryptedCredentialStore (AES256-GCM)
-│   └── ui/                            # Shared UI primitives (button styles, badges, patterns, backgrounds)
+│   └── [ui/]                           # Future shared UI primitives; currently absent
 └── ui/
     └── theme/                         # OpenZonePalette, Typography, AppTheme (System/Light/Dark), OpenZoneTheme wrapper
 ```
@@ -83,8 +83,8 @@ io.github.bengidev.openzone/
 
 One type per file; the file name matches its primary type. The suffix conveys the type's **role**, not the module — the module is already conveyed by the scope prefix.
 
-- `…Component` — a Decompose component (`class …Component : ComponentContext`). There is normally exactly one per module. The `Component` suffix is reserved for Decompose components; do not append it to non-component files.
-- `…Screen` — a top-level Compose screen (`OnboardingScreen`, `HomeScreen`). Use only for navigation destinations.
+- `…Component` — a Decompose component (`class …Component : ComponentContext`) or reducer-style state holder (`ChatComponent`). The `Component` suffix is reserved for application-state owners.
+- `…Screen` — a top-level Compose screen (`OnboardingScreen`, `HomeScreen`, `SettingsScreen`). Use only for navigation destinations.
 - `…View` — a Compose view (`HomeWelcomeView`, `ChatThreadView`, `SidePanelSessionSidebarView`).
 - `…Entity` — a Room database entity (`ConversationEntity`, `MessageEntity`). Use in `infrastructure/persistence/`.
 - `…Store` — a repository/data store interface or implementation (`ChatHistoryStore`, `OnboardingRepository`, `ModelCatalogStore`).
@@ -109,7 +109,7 @@ Boundary prefixes clarify ownership and help agents find related files:
 
 A feature owns one product workflow. Its package organizes files by architectural layer — domain models in `domain/`, Decompose components in `application/`, infrastructure adapters in `infrastructure/`, Compose UI in `presenter/`, theme tokens in `theme/`. Use scope-prefixed type names (e.g., `HomeComposerView`, `ChatAPIClient`, `SidePanelSessionSection`).
 
-Feature code may depend on `shared/externals`, `shared/ui`, `ui/theme`, Kotlin coroutines, and its own feature packages. Feature code must not depend on another feature directly unless a clear integration boundary is introduced.
+Feature code may depend on `shared/externals`, `ui/theme`, Kotlin coroutines, and its own feature packages. Feature code must not depend on another feature directly unless a clear integration boundary is introduced.
 
 #### `sidepanel/`
 
@@ -128,19 +128,19 @@ Externals contains feature-neutral adapters for systems outside the app:
 
 Externals must not reference feature UI or components. Chat domain types (e.g., `ChatMessage`) belong in `chat/domain/`. Feature orchestration clients (e.g., `ChatAPIClient`, `OpenRouterModelFetcher`) belong in the owning feature's package or `shared/externals/` if truly cross-cutting.
 
-### `shared/ui/` and `ui/theme/`
+### `ui/theme/` and future `shared/ui/`
 
-Shared contains app-wide UI primitives that are safe for multiple features to reuse:
+Shared theme code is app-wide and safe for multiple features to reuse:
 
 - `ui/theme/` — `OpenZonePalette` (iOS-faithful graphite), `Typography`, `AppTheme` (System/Light/Dark), `OpenZoneTheme` wrapper.
-- `shared/ui/` — reusable Compose primitives, patterns, button styles, badges.
+- `shared/ui/` — currently absent; introduce only when a Compose primitive is consumed by at least two features.
 
 Shared code must not import or reference feature code. If a component contains feature-specific copy, state, or workflow behavior, keep it in the feature's `presenter/` package instead.
 
 ## Type visibility
 
 All types default to `internal` unless they are:
-- In `shared/externals/` or `shared/ui/` — these are cross-cutting and reusable across features
+- In `shared/externals/` — these are cross-cutting and reusable across features
 - In `ui/theme/` — app-wide theme
 
 This keeps the API surface implicit. Public types should be documented in their context's `CONTEXT.md`.
@@ -191,7 +191,7 @@ This pattern is explicit and testable. Consider migrating to Hilt when:
 If module boundaries need compiler enforcement, promote these packages to internal Gradle modules in this order:
 
 1. Promote `shared/externals/` to an internal module (`:externals`).
-2. Promote `shared/ui/` and `ui/theme/` to an internal module (`:shared-ui`).
+2. Promote future `shared/ui/` and existing `ui/theme/` to an internal module (`:shared-ui`).
 3. Promote feature packages to internal modules as needed (`:feature-chat`, `:feature-home`, etc.).
 4. Keep domain models in pure Kotlin modules (no Android dependencies).
 

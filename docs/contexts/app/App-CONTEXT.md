@@ -21,24 +21,32 @@ io.github.bengidev.openzone/
 
 ## Responsibilities
 
-1. **Composition root**: `MainActivity` instantiates infrastructure dependencies (Room DB, DataStore, credential store) and injects them into the root component
-2. **Global routing**: Manages navigation between top-level features (Onboarding ↔ Home ↔ Chat)
-3. **Theme provision**: Wraps the app in `OpenZoneTheme` for consistent styling
-4. **Lifecycle management**: Uses `lifecycleScope` for app-level coroutines
+1. **Composition root**: `MainActivity` instantiates infrastructure dependencies (Room DB, DataStore-backed stores, credential store) and injects them into feature components
+2. **Global routing**: Manages first-run switch from Onboarding to Home
+3. **Theme provision**: Wraps the app in `OpenZoneTheme` and provides `LocalAppTheme`
+4. **Lifecycle setup**: Creates the Decompose `DefaultComponentContext` from an Essenty `LifecycleRegistry`
 
 ## Decompose Integration
 
-The app shell creates a `ComponentContext` and passes it to the root `HomeComponent`:
+The app shell creates a `ComponentContext` and passes it to `OnboardingComponent` and `HomeComponent`:
 
 ```kotlin
 class MainActivity : ComponentActivity() {
+    private val lifecycleRegistry = LifecycleRegistry()
+    private var showHome by mutableStateOf(false)
+
     override fun onCreate(savedInstanceState: Bundle?) {
-        val componentContext = DefaultComponentContext(lifecycle.asDecomposeLifecycle())
-        val rootComponent = HomeComponent(componentContext, /* dependencies */)
-        
+        val componentContext = DefaultComponentContext(lifecycle = lifecycleRegistry)
+        val homeComponent = HomeComponent(componentContext, /* dependencies */)
+        val onboardingComponent = OnboardingComponent(
+            componentContext = componentContext,
+            repository = DataStoreOnboardingRepository(this),
+            onComplete = { showHome = true }
+        )
+
         setContent {
             OpenZoneTheme {
-                HomeScreen(rootComponent)
+                if (showHome) HomeScreen(homeComponent) else OnboardingScreen(onboardingComponent)
             }
         }
     }
@@ -47,17 +55,17 @@ class MainActivity : ComponentActivity() {
 
 ## Routing Strategy
 
-- **Onboarding → Home**: After onboarding completes, switch to Home
-- **Home → Chat**: User selects a conversation
-- **Chat → Home**: User returns via back navigation
-- **Any → Settings**: Overlay presentation managed by Home
+- **Onboarding → Home**: After onboarding completes, `showHome` switches the rendered root screen
+- **Home welcome ↔ Chat thread**: `HomeScreen` swaps content based on `ChatComponent` messages
+- **Home → Settings**: Settings is presented by `HomeScreen` from `HomeComponent.settingsComponent`
+- **Home → Session sidebar**: Saved-conversation sidebar is presented by `HomeScreen` from `SidePanelSessionComponent`
 
 ## Key Decisions
 
 - **Single Activity pattern**: All navigation handled within `MainActivity` using Compose and Decompose
 - **Manual DI**: Currently using constructor injection without Hilt; promotes explicit dependency tracking
 - **Theme at root**: `OpenZoneTheme` wraps entire app for consistent Material 3 styling
-- **Lifecycle binding**: Uses `lifecycle.asDecomposeLifecycle()` to sync Decompose with Android lifecycle
+- **Lifecycle binding**: Uses an Essenty `LifecycleRegistry` with `DefaultComponentContext`
 
 ## Constraints
 
@@ -69,4 +77,4 @@ class MainActivity : ComponentActivity() {
 ## Future Considerations
 
 - May migrate to Hilt for DI as complexity grows
-- Settings currently uses legacy `SettingsComponent`; target: `SidePanelSettingComponent` (see migration plan)
+- Settings currently uses legacy `SettingsComponent`; target: `SidePanelSettingComponent` (see migration plan).

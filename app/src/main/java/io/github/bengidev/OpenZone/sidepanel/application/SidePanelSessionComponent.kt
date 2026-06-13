@@ -11,6 +11,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Decompose component for the side panel's session scope — the saved-conversation
@@ -48,10 +49,11 @@ class SidePanelSessionComponent(
     )
     val state: Value<State> = _state
 
+    private val scope = mainScope
+
     init {
-        mainScope.launch {
-            val list = historyStore.listConversations()
-            _state.update { it.copy(conversations = list) }
+        scope.launch {
+            reloadConversations()
         }
     }
 
@@ -60,7 +62,9 @@ class SidePanelSessionComponent(
     fun onToggleSidebar() {
         val isVisible = !_state.value.isSidebarVisible
         _state.update { it.copy(isSidebarVisible = isVisible) }
-        if (isVisible) reloadConversations()
+        if (isVisible) {
+            scope.launch { reloadConversations() }
+        }
     }
 
     fun onDismissSidebar() {
@@ -79,15 +83,19 @@ class SidePanelSessionComponent(
     }
 
     fun onPinConversation(conversation: ChatConversation) {
-        CoroutineScope(Dispatchers.IO + SupervisorJob()).launch {
-            historyStore.setPinned(conversation.id, !conversation.isPinned)
+        scope.launch {
+            withContext(Dispatchers.IO) {
+                historyStore.setPinned(conversation.id, !conversation.isPinned)
+            }
             reloadConversations()
         }
     }
 
     fun onRenameConversation(conversation: ChatConversation, newTitle: String) {
-        CoroutineScope(Dispatchers.IO + SupervisorJob()).launch {
-            historyStore.renameConversation(conversation.id, newTitle)
+        scope.launch {
+            withContext(Dispatchers.IO) {
+                historyStore.renameConversation(conversation.id, newTitle)
+            }
             reloadConversations()
             val renamed = conversation.copy(title = newTitle)
             _state.update { it.copy(activeConversationId = renamed.id) }
@@ -96,9 +104,16 @@ class SidePanelSessionComponent(
     }
 
     fun onDeleteConversation(conversation: ChatConversation) {
-        CoroutineScope(Dispatchers.IO + SupervisorJob()).launch {
-            historyStore.deleteConversation(conversation.id)
+        scope.launch {
+            withContext(Dispatchers.IO) {
+                historyStore.deleteConversation(conversation.id)
+            }
             reloadConversations()
+            _state.update { state ->
+                if (state.activeConversationId == conversation.id) {
+                    state.copy(activeConversationId = null, isSidebarVisible = false)
+                } else state
+            }
             onDeleteConversation(conversation)
         }
     }
@@ -109,10 +124,10 @@ class SidePanelSessionComponent(
 
     // ---- Internal ----------------------------------------------------------
 
-    private fun reloadConversations() {
-        CoroutineScope(Dispatchers.IO + SupervisorJob()).launch {
-            val list = historyStore.listConversations()
-            _state.update { it.copy(conversations = list) }
+    private suspend fun reloadConversations() {
+        val list = withContext(Dispatchers.IO) {
+            historyStore.listConversations()
         }
+        _state.update { it.copy(conversations = list) }
     }
 }

@@ -2,18 +2,14 @@
 
 | | |
 | --- | --- |
-| **Context** | Cross-feature reusable UI and theme |
-| **Code** | `shared/` (excluding `shared/externals/`), `ui/theme/` |
+| **Context** | App-wide theme |
+| **Code** | `ui/theme/` |
 | **Map** | [CONTEXT-MAP.md](../../../CONTEXT-MAP.md) |
 | **Layout rules** | [docs/architecture/modules.md](../../architecture/modules.md) |
 
-`shared/` and `ui/theme/` contain app-wide theme and UI primitives that are safe for multiple features to reuse.
+`ui/theme/` contains the app-wide theme primitives used by feature themes. There is no `shared/ui/` package yet; `shared/` currently hosts `shared/externals/` only.
 
 ```text
-shared/
-├── ui/         # Shared UI primitives (button styles, badges, patterns, backgrounds)
-└── [externals/]  # See Externals context
-
 ui/
 └── theme/      # OpenZonePalette, Typography, AppTheme, Theme.kt (OpenZoneTheme wrapper)
 ```
@@ -26,9 +22,8 @@ None. Shared is a leaf dependency — it must not import any feature code.
 
 ## Language
 
-- **Shared primitive** — reusable, feature-neutral UI or theme code.
 - **Theme** — app-wide color scheme preference, palette, typography.
-- **UI primitive** — reusable visual building block such as a button style, badge, card chrome, or background pattern.
+- **Feature theme** — feature-local aliases/wrappers that reuse app-wide palette and typography.
 - **OpenZonePalette** — the iOS-faithful graphite monochrome palette. Authoritative definition in `ui/theme/Palette.kt`.
 - **AppTheme** — light/dark/system theme preference (enum with `CompositionLocal`).
 - **OpenZoneTheme** — the Compose wrapper that applies theme colors, typography, and shapes over `MaterialTheme`.
@@ -44,22 +39,19 @@ None. Shared is a leaf dependency — it must not import any feature code.
 - `Color.kt` — legacy color constants (deprecated: use `OpenZonePalette`)
 - `Type.kt` — default typography definitions
 
-### `shared/ui/`
-
-Feature-neutral Compose primitives consumed by any feature presenter.
+No `shared/ui/` primitives exist in the current codebase. Feature-specific UI remains inside each feature's `presenter/` package until a reusable primitive is extracted.
 
 ## Architecture
 
-- Shared code must not import or reference feature code.
-- Shared code must not contain feature-specific copy, workflow state, or components.
+- Theme code must not import or reference feature code.
 - Feature-specific UI remains inside each feature's `presenter/` package.
-- Shared UI can be used by feature views, but Shared should remain state-management agnostic unless a reusable component explicitly requires a binding or action callback.
+- Reusable UI primitives should be introduced under `shared/ui/` only when at least two features consume them.
 - Palette and typography are defined once in `ui/theme/Palette.kt`. Feature themes re-export or extend from it via `typealias` — never duplicate the palette.
 
 ## Constraints
 
-- **No feature imports** — Shared must never import `home/`, `chat/`, `onboarding/`, `sidepanel/`, or legacy `settings/`.
-- **No business logic** — only UI primitives and theme definitions.
+- **No feature imports** — Shared theme code must never import `home/`, `chat/`, `onboarding/`, `sidepanel/`, or legacy `settings/`.
+- **No business logic** — only theme definitions until `shared/ui/` exists.
 - **No state management** — no Room, no Decompose components, no persistence code.
 
 ## Usage pattern
@@ -67,16 +59,15 @@ Feature-neutral Compose primitives consumed by any feature presenter.
 ```kotlin
 @Composable
 fun HomeComposerView(component: HomeComponent) {
-    val palette = LocalOpenZonePalette.current
-    val theme = LocalAppTheme.current
-    
+    val palette = HomeTheme.palette
+    val appTheme = LocalAppTheme.current
+
     Column(
         modifier = Modifier
             .background(palette.surface)
             .padding(16.dp)
     ) {
-        SharedBadge("Status", palette.accent)
-        SharedCardChrome { /* content */ }
+        // Feature presenter content stays in the feature package.
     }
 }
 ```

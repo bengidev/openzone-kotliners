@@ -7,9 +7,9 @@
 | **Parent** | SidePanel |
 | **Children** | None |
 
-The SidePanel Setting scope manages app-wide preferences and settings.
+The SidePanel Setting scope manages app-wide provider, model, reasoning, and credential preferences.
 
-**Migration status**: In progress. Legacy `SettingsComponent` currently active in `settings/` package. Target: `SidePanelSettingComponent` in `sidepanel/setting/` subdirectory.
+**Migration status**: In progress. Legacy `SettingsComponent` currently active in `settings/` package. Target: `SidePanelSettingComponent` in `sidepanel/application/`.
 
 ## Language
 
@@ -23,19 +23,24 @@ The SidePanel Setting scope manages app-wide preferences and settings.
 
 ### State Management
 
-`SidePanelSettingComponent` (target) will own `MutableValue<SettingsState>`:
+`SidePanelSettingComponent` owns `MutableValue<SidePanelSettingComponent.State>`:
 
 ```kotlin
-data class SettingsState(
-    val selectedProvider: String = "openrouter",
-    val apiKey: String = "",
-    val defaultModel: String = "gpt-4",
-    val reasoningLevel: ReasoningLevel = ReasoningLevel.Medium,
-    val isApiKeyValid: Boolean = false
+data class State(
+    val providers: List<ChatProvider> = emptyList(),
+    val selectedProviderId: String? = null,
+    val models: List<ChatModel> = emptyList(),
+    val selectedModelId: String? = null,
+    val reasoningLevel: ComposerReasoningLevel = ComposerReasoningLevel.Off,
+    val apiKeyDraft: String = "",
+    val hasApiKey: Boolean = false,
+    val isLoaded: Boolean = false,
+    val isLoadingModels: Boolean = false,
+    val modelSupportsReasoning: Boolean = false
 )
 
-enum class ReasoningLevel {
-    Low, Medium, High
+enum class ComposerReasoningLevel {
+    Off, Low, Medium, High
 }
 ```
 
@@ -45,31 +50,26 @@ Settings depend on multiple externals:
 
 ```kotlin
 class SidePanelSettingComponent(
-    context: ComponentContext,
-    private val credentialStore: CredentialStore,
-    private val preferenceStore: PreferenceStore,
-    private val modelRepository: ModelRepository
-) : ComponentContext by context {
-    
-    fun saveApiKey(apiKey: String) {
-        componentScope.launch {
-            credentialStore.storeApiKey(apiKey)
-            state.value = state.value.copy(
-                apiKey = apiKey,
-                isApiKeyValid = credentialStore.validateApiKey(apiKey)
-            )
-        }
+    componentContext: ComponentContext,
+    private val providers: List<ChatProvider>,
+    private val credentialStore: MutableCredentialStore,
+    private val preferenceStore: ProviderPreferenceStore,
+    private val catalogStore: ModelCatalogStore? = null,
+    private val catalogFetcher: ModelCatalogFetcher? = null
+) : ComponentContext by componentContext {
+    fun onSaveApiKey() {
+        val draft = state.value.apiKeyDraft.trim()
+        val providerId = state.value.selectedProviderId ?: return
+        credentialStore.setSecret(providerId, draft)
     }
-    
-    fun updatePreferences(preferences: UserPreferences) {
-        componentScope.launch {
-            preferenceStore.savePreferences(preferences)
-            state.value = state.value.copy(
-                selectedProvider = preferences.provider,
-                defaultModel = preferences.model,
-                reasoningLevel = preferences.reasoningLevel
-            )
-        }
+
+    fun onModelSelected(modelId: String) {
+        val providerId = state.value.selectedProviderId ?: return
+        preferenceStore.setModel(providerId, modelId)
+    }
+
+    fun onReasoningLevelSelected(level: ComposerReasoningLevel) {
+        preferenceStore.setReasoningLevel(level)
     }
 }
 ```
@@ -78,32 +78,32 @@ class SidePanelSettingComponent(
 
 Settings UI is a form-based layout with sections:
 
-- **Provider Configuration**: API key entry, provider selection
-- **Model Preferences**: Default model, reasoning level
-- **Account**: API key validation status, logout
+- **Provider Configuration**: API key draft/save/clear, provider selection
+- **Model Preferences**: Model selection, reasoning level
+- **Catalog**: Cached model list with optional live refresh
 
 ## Dependencies
 
-- **Upstream**: `shared.externals` (credential store, preference store, model repository)
+- **Upstream**: `shared.externals` credential, preference, and model catalog stores
 - **Downstream**: None (leaf feature)
-- **Domain**: `UserPreferences`, `ReasoningLevel` (pure Kotlin)
+- **Domain**: `ComposerReasoningLevel`, `ProviderPreference`, `ChatProvider`, `ChatModel`
 
 ## Constraints
 
-- API keys must be validated before saving
-- Credentials stored via `EncryptedCredentialStore` (AES-256)
+- API keys must never be exposed through state; only `apiKeyDraft` and `hasApiKey` are surfaced.
+- Credentials stored via `EncryptedCredentialStore` (EncryptedSharedPreferences)
 - Changes persist immediately to prevent data loss
 
 ## Migration Plan
 
-1. Create `sidepanel/setting/` subdirectory structure
-2. Implement `SidePanelSettingComponent` with same functionality as `SettingsComponent`
-3. Update `HomeComponent` to inject `SidePanelSettingComponent.Factory`
-4. Deprecate `settings/` package
-5. Remove legacy code after verification
+1. Keep `SidePanelSettingComponent` functionally aligned with legacy `SettingsComponent`.
+2. Add a presenter surface for the setting scope.
+3. Update `HomeComponent` to use `SidePanelSettingComponent` for settings presentation.
+4. Deprecate `settings/` package.
+5. Remove legacy code after verification.
 
 ## Key Decisions
 
 - **EncryptedSharedPreferences**: Industry-standard encryption for sensitive data
 - **Immediate persistence**: Prevents user confusion about unsaved changes
-- **Factory pattern**: Enables dependency injection and testing
+- **Constructor injection**: Keeps stores explicit and testable

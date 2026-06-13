@@ -87,6 +87,12 @@ class HomeComponent(
                 onOpenConversation = { conversation ->
                     chatComponent.openConversation(conversation)
                     _state.update { it.copy(isSidebarPresented = false) }
+                },
+                onDeleteConversation = { conversation ->
+                    if (chatComponent.state.value.conversation.id == conversation.id) {
+                        chatComponent.resetToNewConversation()
+                    }
+                    _state.update { it.copy(isSidebarPresented = false) }
                 }
             )
         } else null

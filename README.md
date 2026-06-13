@@ -25,8 +25,8 @@ OpenZone Kotliners is a **native Android AI assistant** built with Kotlin and Je
 |---------------|-----------------------------------|
 | **Language**  | Kotlin 2.2.10                     |
 | **UI**        | Jetpack Compose BOM 2026.02.01    |
-| **Architecture** | Decompose 3.3.0 + Coroutines   |
-| **Persistence** | Room 2.6.1, DataStore           |
+| **Architecture** | Decompose 3.5.0 + Coroutines   |
+| **Persistence** | Room 2.7.1, DataStore           |
 | **Networking** | OkHttp 4.12.0, SSE streaming     |
 | **Security**  | EncryptedSharedPreferences        |
 | **Min SDK**   | 30 (Android 11)                   |
@@ -38,7 +38,7 @@ OpenZone Kotliners is a **native Android AI assistant** built with Kotlin and Je
 ### Prerequisites
 
 - Android Studio Ladybug or newer
-- JDK 17 or higher
+- JDK 21
 - Android SDK with API 36
 
 ### Build & Run
@@ -47,7 +47,7 @@ OpenZone Kotliners is a **native Android AI assistant** built with Kotlin and Je
 2. Open in Android Studio
 3. Sync Gradle and run on an emulator or physical device (API 30+)
 
-**First run**: complete the onboarding flow to configure your AI provider and API key. The app supports OpenRouter as the initial provider.
+**First run**: complete the onboarding product tour. Configure your AI provider/model and API key from Settings/Home before sending messages. The app supports OpenRouter as the initial provider.
 
 ## Project Structure
 
@@ -85,7 +85,7 @@ app/src/main/java/io/github/bengidev/openzone/
 │   │   ├── networking/          # ChatProvider, AuthScheme, SseLineDecoder, ChatModel
 │   │   ├── preference/          # ComposerReasoningLevel, ProviderPreferenceStore
 │   │   └── security/            # CredentialStore, EncryptedCredentialStore
-│   └── ui/                      # Reusable UI primitives
+│   └── [ui/]                    # Future reusable UI primitives; currently absent
 └── ui/theme/                    # App theme (OpenZonePalette, Typography, AppTheme)
 ```
 

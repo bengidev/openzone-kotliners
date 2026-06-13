@@ -159,34 +159,29 @@ class SidePanelSettingComponent(
         return cached?.takeIf { it.isNotEmpty() } ?: ModelCatalog.forProvider(providerId)
     }
 
-    private fun refreshCatalogIfStale(providerId: String) {
+    private suspend fun refreshCatalogIfStale(providerId: String) {
         val store = catalogStore ?: return
         val fetcher = catalogFetcher ?: return
-        val bgScope = CoroutineScope(ioDispatcher + SupervisorJob())
-        bgScope.launch {
-            val cached = store.cachedCatalog(providerId)
-            val nowMs = now()
-            if (cached != null && !cached.isStale(nowMs, catalogTtlMs)) return@launch
+        val cached = store.cachedCatalog(providerId)
+        val nowMs = now()
+        if (cached != null && !cached.isStale(nowMs, catalogTtlMs)) return
 
-            _state.update { it.copy(isLoadingModels = true) }
-            try {
-                val models = fetcher.fetchSync(providerId) ?: ModelCatalog.forProvider(providerId)
-                store.saveCatalog(providerId, models, nowMs)
-                withContext(Dispatchers.Main) {
-                    _state.update {
-                        val currentModelId = it.selectedModelId
-                        it.copy(
-                            models = models,
-                            modelSupportsReasoning = models.firstOrNull { m -> m.id == currentModelId }?.supportsReasoning == true,
-                            isLoadingModels = false
-                        )
-                    }
-                }
-            } catch (_: Exception) {
-                withContext(Dispatchers.Main) {
-                    _state.update { it.copy(isLoadingModels = false) }
-                }
+        _state.update { it.copy(isLoadingModels = true) }
+        try {
+            val models = withContext(ioDispatcher) {
+                fetcher.fetchSync(providerId) ?: ModelCatalog.forProvider(providerId)
             }
+            store.saveCatalog(providerId, models, nowMs)
+            _state.update {
+                val currentModelId = it.selectedModelId
+                it.copy(
+                    models = models,
+                    modelSupportsReasoning = models.firstOrNull { m -> m.id == currentModelId }?.supportsReasoning == true,
+                    isLoadingModels = false
+                )
+            }
+        } catch (_: Exception) {
+            _state.update { it.copy(isLoadingModels = false) }
         }
     }
 

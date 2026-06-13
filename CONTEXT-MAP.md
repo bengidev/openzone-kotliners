@@ -12,7 +12,7 @@ This repository uses a domain-driven documentation structure where each bounded 
 | [Onboarding Feature](docs/contexts/onboarding/Onboarding-CONTEXT.md) | `onboarding/` | First-time user setup and welcome flow |
 | [SidePanel Feature](docs/contexts/sidepanel/SidePanel-CONTEXT.md) | `sidepanel/` | Session browser + setting scope (slide-in panel) |
 | [Externals](docs/contexts/externals/Externals-CONTEXT.md) | `shared/externals/` | External system adapters (APIs, storage, preferences) |
-| [Shared](docs/contexts/shared/Shared-CONTEXT.md) | `shared/ui/`, `ui/theme/` | Cross-feature UI components and theme |
+| [Shared](docs/contexts/shared/Shared-CONTEXT.md) | `ui/theme/` | App-wide theme primitives |
 
 ## Architecture Overview
 
@@ -38,7 +38,7 @@ io.github.bengidev.openzone/
 │   │   ├── networking/            # ChatProvider, AuthScheme, SseLineDecoder, ChatModel, ModelCatalogStore
 │   │   ├── security/              # CredentialStore, MutableCredentialStore, EncryptedCredentialStore
 │   │   └── preference/            # ComposerReasoningLevel, ProviderPreference, ProviderPreferenceStore
-│   └── ui/                        # Shared UI primitives (button styles, badges, patterns)
+│   └── [ui/]                       # Future shared UI primitives; currently absent
 └── ui/
     └── theme/                     # Palette, Typography, AppTheme
 ```
@@ -51,7 +51,7 @@ Types use prefixes to indicate ownership and scope:
 - **`Chat…`** — Chat feature types (e.g., `ChatMessage`, `ChatThreadView`)
 - **`Onboarding…`** — Onboarding feature types (e.g., `OnboardingPage`, `OnboardingView`)
 - **`SidePanel…`** — SidePanel feature types (e.g., `SidePanelSessionComponent`, `SidePanelSettingView`)
-- **`Shared…`** — Cross-feature reusable components (e.g., `SharedBadge`, `SharedCardChrome`)
+- **`Shared…`** — Reserved for future cross-feature reusable components; currently no `shared/ui/` types exist
 
 ### Type Naming Conventions
 

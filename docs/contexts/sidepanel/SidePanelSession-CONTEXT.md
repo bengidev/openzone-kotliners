@@ -31,4 +31,4 @@ This scope supersedes the old "history chat" naming. Former Home-scoped browsing
 ## Boundaries
 
 - Owns browsing/navigation across saved sessions only — not the live stream (Chat) or the composer (Home).
-- Reuse theme and UI primitives from `shared/ui` and `ui/theme`.
+- Reuse theme from `ui/theme`.

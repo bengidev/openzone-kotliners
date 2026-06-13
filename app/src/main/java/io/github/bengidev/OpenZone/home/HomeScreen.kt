@@ -20,18 +20,22 @@ import io.github.bengidev.openzone.chat.presenter.ChatThreadView
 import io.github.bengidev.openzone.chat.theme.OpenZoneChatTheme
 import io.github.bengidev.openzone.home.application.HomeComponent
 import io.github.bengidev.openzone.home.presenter.HomeComposerView
-import io.github.bengidev.openzone.home.presenter.HomeSidebarView
 import io.github.bengidev.openzone.home.presenter.HomeTopBar
 import io.github.bengidev.openzone.home.presenter.HomeWelcomeView
 import io.github.bengidev.openzone.home.presenter.clearFocusOnTapOutside
 import io.github.bengidev.openzone.home.theme.HomeTheme
 import io.github.bengidev.openzone.home.theme.OpenZoneHomeTheme
 import io.github.bengidev.openzone.settings.SettingsScreen
+import io.github.bengidev.openzone.sidepanel.presenter.SidePanelSessionSidebarView
 
 /**
  * Home shell — iOS `MainChat` welcome layout. Swaps between welcome
  * hero and chat-thread view based on whether the chat feature has
  * any messages (mirrors iOS `HomeView.showsWelcome`).
+ *
+ * The session sidebar now uses [SidePanelSessionSidebarView] from the
+ * side panel module (mirrors iOS `SidePanelSessionSidebarView`).
+ * Settings remains a separate overlay for now.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -118,6 +122,7 @@ fun HomeScreen(
                     }
                 }
 
+                // Settings overlay (migration target: sidepanel setting scope)
                 val settingsComponent = component.settingsComponent
                 if (state.isSettingsPresented && settingsComponent != null) {
                     SettingsScreen(
@@ -127,10 +132,15 @@ fun HomeScreen(
                     )
                 }
 
-                if (state.isSidebarPresented) {
-                    HomeSidebarView(
-                        conversations = state.conversations,
+                // Session sidebar — delegates to SidePanelSessionComponent
+                val sessionComponent = component.sidePanelSessionComponent
+                if (state.isSidebarPresented && sessionComponent != null) {
+                    SidePanelSessionSidebarView(
+                        component = sessionComponent,
                         onConversationSelected = component::onConversationSelected,
+                        onPinTapped = { sessionComponent.onPinConversation(it) },
+                        onRenameTapped = { /* TODO: rename dialog */ },
+                        onDeleteTapped = { sessionComponent.onDeleteConversation(it) },
                         onDismiss = component::onSidebarDismissed,
                         modifier = Modifier.fillMaxSize()
                     )
@@ -139,5 +149,3 @@ fun HomeScreen(
         }
     }
 }
-
-

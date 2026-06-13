@@ -10,8 +10,8 @@ import io.github.bengidev.openzone.chat.domain.ChatMessages
 import io.github.bengidev.openzone.chat.infrastructure.ChatAPIClient
 import io.github.bengidev.openzone.chat.infrastructure.ChatHistoryStore
 import io.github.bengidev.openzone.chat.infrastructure.ChatProviders
-import io.github.bengidev.openzone.home.domain.ComposerReasoningLevel
-import io.github.bengidev.openzone.shared.networking.ChatProvider
+import io.github.bengidev.openzone.shared.externals.preference.ComposerReasoningLevel
+import io.github.bengidev.openzone.shared.externals.networking.ChatProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -176,7 +176,13 @@ class ChatComponent(
 
     fun onClearThread() {
         if (_state.value.isStreaming) return
-        _state.update { it.copy(messages = emptyList(), isReasoningExpanded = false) }
+        resetToNewConversation()
+    }
+
+    fun resetToNewConversation() {
+        streamJob?.cancel()
+        streamJob = null
+        _state.update { ChatState() }
     }
 
     fun onToggleReasoning() {

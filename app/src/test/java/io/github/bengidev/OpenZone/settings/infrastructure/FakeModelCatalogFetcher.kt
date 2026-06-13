@@ -1,6 +1,7 @@
 package io.github.bengidev.openzone.settings.infrastructure
 
-import io.github.bengidev.openzone.shared.networking.ChatModel
+import io.github.bengidev.openzone.shared.externals.networking.ChatModel
+import io.github.bengidev.openzone.shared.externals.networking.ModelCatalogFetcher
 
 /**
  * Deterministic [ModelCatalogFetcher] test double. Returns [models] when

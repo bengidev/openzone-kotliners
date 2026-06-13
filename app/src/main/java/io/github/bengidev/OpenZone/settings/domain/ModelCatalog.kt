@@ -1,6 +1,6 @@
 package io.github.bengidev.openzone.settings.domain
 
-import io.github.bengidev.openzone.shared.networking.ChatModel
+import io.github.bengidev.openzone.shared.externals.networking.ChatModel
 
 /**
  * Curated fallback catalog of free models. Used when a live model list is

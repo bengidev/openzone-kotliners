@@ -1,8 +1,8 @@
 package io.github.bengidev.openzone.settings.infrastructure
 
-import io.github.bengidev.openzone.shared.networking.CachedCatalog
-import io.github.bengidev.openzone.shared.networking.ChatModel
-import io.github.bengidev.openzone.shared.networking.ModelCatalogStore
+import io.github.bengidev.openzone.shared.externals.networking.CachedCatalog
+import io.github.bengidev.openzone.shared.externals.networking.ChatModel
+import io.github.bengidev.openzone.shared.externals.networking.ModelCatalogStore
 
 /**
  * In-memory [ModelCatalogStore] test double. Stores catalogs per provider id

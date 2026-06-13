@@ -1,7 +1,7 @@
 package io.github.bengidev.openzone.chat.domain
 
-import io.github.bengidev.openzone.home.domain.ComposerReasoningLevel
-import io.github.bengidev.openzone.shared.networking.ChatProvider
+import io.github.bengidev.openzone.shared.externals.preference.ComposerReasoningLevel
+import io.github.bengidev.openzone.shared.externals.networking.ChatProvider
 
 /**
  * Request payload sent to a chat API client.

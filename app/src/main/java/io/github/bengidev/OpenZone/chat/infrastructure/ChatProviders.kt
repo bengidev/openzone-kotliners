@@ -1,7 +1,7 @@
 package io.github.bengidev.openzone.chat.infrastructure
 
-import io.github.bengidev.openzone.shared.networking.AuthScheme
-import io.github.bengidev.openzone.shared.networking.ChatProvider
+import io.github.bengidev.openzone.shared.externals.networking.AuthScheme
+import io.github.bengidev.openzone.shared.externals.networking.ChatProvider
 
 /**
  * Built-in [ChatProvider] definitions. OpenRouter is the first configured

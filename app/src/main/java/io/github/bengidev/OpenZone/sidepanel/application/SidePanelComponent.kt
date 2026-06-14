@@ -21,7 +21,7 @@ class SidePanelComponent(
     historyStore: ChatHistoryStore,
     private val credentialStore: MutableCredentialStore,
     private val preferenceStore: ProviderPreferenceStore,
-    providers: List<ChatProvider> = ChatProviders.all,
+    private val providers: List<ChatProvider> = ChatProviders.all,
     private val onDelegate: (Delegate) -> Unit = {}
 ) : ComponentContext by componentContext {
 

@@ -7,56 +7,63 @@ import io.github.bengidev.openzone.chat.infrastructure.persistence.ChatMessageMa
 import io.github.bengidev.openzone.chat.infrastructure.persistence.ConversationEntity
 
 /**
- * Room-backed [ChatHistoryStore]. Translates domain types to/from persistence
- * entities at the boundary via [ChatMessageMapper] and delegates storage to
- * [ChatHistoryDao]. Holds no Android `Context` — it takes the DAO directly so it
- * can be unit-tested against an in-memory Room database.
+ * Room-backed [ChatHistoryStore]. Translates domain types to/from persistence entities at the
+ * boundary via [ChatMessageMapper] and delegates storage to [ChatHistoryDao]. Holds no Android
+ * `Context` — it takes the DAO directly so it can be unit-tested against an in-memory Room
+ * database.
  */
-class RoomChatHistoryStore(
-    private val dao: ChatHistoryDao
-) : ChatHistoryStore {
+class RoomChatHistoryStore(private val dao: ChatHistoryDao) : ChatHistoryStore {
 
-    override suspend fun upsertConversation(conversation: ChatConversation) {
-        dao.upsertConversation(
-            ConversationEntity(
-                id = conversation.id,
-                title = conversation.title,
-                createdAt = conversation.createdAt,
-                updatedAt = conversation.updatedAt,
-                isPinned = conversation.isPinned
-            )
-        )
-    }
+ override suspend fun upsertConversation(conversation: ChatConversation) {
+  dao.upsertConversation(
+          ConversationEntity(
+                  id = conversation.id,
+                  title = conversation.title,
+                  createdAt = conversation.createdAt,
+                  updatedAt = conversation.updatedAt,
+                  isPinned = conversation.isPinned,
+                  groupName = conversation.groupName
+          )
+  )
+ }
 
-    override suspend fun upsertMessage(conversationId: String, message: ChatMessage) {
-        dao.upsertMessage(ChatMessageMapper.toEntity(conversationId, message))
-    }
+ override suspend fun upsertMessage(conversationId: String, message: ChatMessage) {
+  dao.upsertMessage(ChatMessageMapper.toEntity(conversationId, message))
+ }
 
-    override suspend fun loadMessages(conversationId: String): List<ChatMessage> =
-        dao.messagesFor(conversationId).map(ChatMessageMapper::toDomain)
+ override suspend fun loadMessages(conversationId: String): List<ChatMessage> =
+         dao.messagesFor(conversationId).map(ChatMessageMapper::toDomain)
 
-    override suspend fun listConversations(): List<ChatConversation> =
-        dao.conversations().map { entity ->
-            ChatConversation(
-                id = entity.id,
-                title = entity.title,
-                createdAt = entity.createdAt,
-                updatedAt = entity.updatedAt,
-                isPinned = entity.isPinned
-            )
-        }
+ override suspend fun listConversations(): List<ChatConversation> =
+         dao.conversations().map { entity ->
+          ChatConversation(
+                  id = entity.id,
+                  title = entity.title,
+                  createdAt = entity.createdAt,
+                  updatedAt = entity.updatedAt,
+                  isPinned = entity.isPinned,
+                  groupName = entity.groupName
+          )
+         }
 
-    override suspend fun deleteConversation(conversationId: String) {
-        dao.deleteConversation(conversationId)
-    }
+ override suspend fun deleteConversation(conversationId: String) {
+  dao.deleteConversation(conversationId)
+ }
 
-    override suspend fun renameConversation(conversationId: String, title: String) {
-        val now = System.currentTimeMillis()
-        dao.renameConversation(conversationId, title, now)
-    }
+ override suspend fun renameConversation(conversationId: String, title: String) {
+  val now = System.currentTimeMillis()
+  dao.renameConversation(conversationId, title, now)
+ }
 
-    override suspend fun setPinned(conversationId: String, isPinned: Boolean) {
-        val now = System.currentTimeMillis()
-        dao.setPinned(conversationId, isPinned, now)
-    }
+ override suspend fun setPinned(conversationId: String, isPinned: Boolean) {
+  val now = System.currentTimeMillis()
+  dao.setPinned(conversationId, isPinned, now)
+ }
+
+ override suspend fun setGroup(conversationId: String, groupName: String?) {
+  val normalized = groupName?.trim()?.takeIf { it.isNotEmpty() }
+  dao.setGroup(conversationId, normalized)
+ }
+
+ override suspend fun listGroups(): List<String> = dao.listGroups()
 }

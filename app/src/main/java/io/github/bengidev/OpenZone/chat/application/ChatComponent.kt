@@ -185,6 +185,14 @@ class ChatComponent(
         _state.update { ChatState() }
     }
 
+    fun renameActiveConversation(title: String) {
+        val trimmed = title.trim()
+        if (trimmed.isEmpty()) return
+        _state.update { state ->
+            state.copy(conversation = state.conversation.copy(title = trimmed))
+        }
+    }
+
     fun onToggleReasoning() {
         _state.update { it.copy(isReasoningExpanded = !it.isReasoningExpanded) }
     }

@@ -10,5 +10,7 @@ data class ChatConversation(
     val title: String,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
-    val isPinned: Boolean = false
+    val isPinned: Boolean = false,
+    /** Optional folder name in the session sidebar; `null` = recency bucket only. */
+    val groupName: String? = null
 )

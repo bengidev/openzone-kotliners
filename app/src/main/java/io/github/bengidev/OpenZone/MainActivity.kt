@@ -42,7 +42,7 @@ class MainActivity : ComponentActivity() {
             applicationContext,
             ChatDatabase::class.java,
             ChatDatabase.DATABASE_NAME
-        ).addMigrations(ChatDatabase.MIGRATION_1_2)
+        ).addMigrations(ChatDatabase.MIGRATION_1_2, ChatDatabase.MIGRATION_2_3)
             .build()
         val chatHistoryStore = RoomChatHistoryStore(chatDatabase.chatHistoryDao())
 

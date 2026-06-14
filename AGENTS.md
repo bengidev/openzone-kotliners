@@ -50,4 +50,4 @@ Multi-context: [CONTEXT-MAP.md](CONTEXT-MAP.md) points to per-context `CONTEXT.m
 
 ## Deprecated packages
 
-The `settings/` package is deprecated — being migrated to `sidepanel/` package. `SidePanelSettingComponent` exists as migration target but old `SettingsComponent` + `SettingsView` remain active.
+The `settings/` package is **deprecated** — superseded by `sidepanel/` (`SidePanelComponent` hosts session + setting scopes, mirroring iOS `SidePanelFeature`). Legacy `SettingsComponent` remains for tests only.

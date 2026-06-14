@@ -38,4 +38,10 @@ interface ChatHistoryDao {
 
     @Query("UPDATE conversations SET isPinned = :isPinned, updatedAt = :updatedAt WHERE id = :conversationId")
     suspend fun setPinned(conversationId: String, isPinned: Boolean, updatedAt: Long)
+
+    @Query("UPDATE conversations SET groupName = :groupName WHERE id = :conversationId")
+    suspend fun setGroup(conversationId: String, groupName: String?)
+
+    @Query("SELECT DISTINCT groupName FROM conversations WHERE groupName IS NOT NULL ORDER BY groupName ASC")
+    suspend fun listGroups(): List<String>
 }

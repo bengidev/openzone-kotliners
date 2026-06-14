@@ -6,54 +6,56 @@ import io.github.bengidev.openzone.chat.domain.ChatMessage
 /**
  * Persistence boundary for chat history.
  *
- * Mirrors the onboarding `OnboardingRepository` pattern: a pure interface in the
- * feature's infrastructure layer, with a concrete storage implementation
- * ([RoomChatHistoryStore]) kept behind it so the
- * [io.github.bengidev.openzone.chat.application.ChatComponent]
- * reducer stays free of Room/Android dependencies and remains unit-testable with
- * an in-memory double.
+ * Mirrors the onboarding `OnboardingRepository` pattern: a pure interface in the feature's
+ * infrastructure layer, with a concrete storage implementation ([RoomChatHistoryStore]) kept behind
+ * it so the [io.github.bengidev.openzone.chat.application.ChatComponent] reducer stays free of
+ * Room/Android dependencies and remains unit-testable with an in-memory double.
  *
  * Writes happen at **turn boundaries only** (see `ChatComponent`):
- *  - the user message is persisted on send,
- *  - the assistant message is persisted once on stream completion.
+ * - the user message is persisted on send,
+ * - the assistant message is persisted once on stream completion.
  *
- * Domain [ChatMessage] / [ChatConversation] types cross this boundary; the
- * mapping to and from the Room persistence representation happens inside the
- * concrete implementation, never leaking entities to callers.
+ * Domain [ChatMessage] / [ChatConversation] types cross this boundary; the mapping to and from the
+ * Room persistence representation happens inside the concrete implementation, never leaking
+ * entities to callers.
  *
  * Mirrors iOS `ChatHistoryClient`.
  */
 interface ChatHistoryStore {
 
-    /** Inserts or updates the conversation row (idempotent on `id`). */
-    suspend fun upsertConversation(conversation: ChatConversation)
+ /** Inserts or updates the conversation row (idempotent on `id`). */
+ suspend fun upsertConversation(conversation: ChatConversation)
 
-    /**
-     * Inserts or updates a single message for [conversationId] (idempotent on the
-     * message `id`, so re-persisting a completed assistant turn is a no-op-ish
-     * overwrite rather than a duplicate row).
-     */
-    suspend fun upsertMessage(conversationId: String, message: ChatMessage)
+ /**
+  * Inserts or updates a single message for [conversationId] (idempotent on the message `id`, so
+  * re-persisting a completed assistant turn is a no-op-ish overwrite rather than a duplicate row).
+  */
+ suspend fun upsertMessage(conversationId: String, message: ChatMessage)
 
-    /**
-     * Loads all persisted messages for [conversationId] in chronological order.
-     * Returns an empty list when the conversation has no stored history.
-     */
-    suspend fun loadMessages(conversationId: String): List<ChatMessage>
+ /**
+  * Loads all persisted messages for [conversationId] in chronological order. Returns an empty list
+  * when the conversation has no stored history.
+  */
+ suspend fun loadMessages(conversationId: String): List<ChatMessage>
 
-    /**
-     * Lists all persisted conversations, pinned-first then most-recently-updated
-     * first. Returns an empty list when no conversation has been persisted yet.
-     * Backs the sidebar conversation list.
-     */
-    suspend fun listConversations(): List<ChatConversation>
+ /**
+  * Lists all persisted conversations, pinned-first then most-recently-updated first. Returns an
+  * empty list when no conversation has been persisted yet. Backs the sidebar conversation list.
+  */
+ suspend fun listConversations(): List<ChatConversation>
 
-    /** Deletes a conversation and all its messages (cascade). */
-    suspend fun deleteConversation(conversationId: String)
+ /** Deletes a conversation and all its messages (cascade). */
+ suspend fun deleteConversation(conversationId: String)
 
-    /** Rename a conversation's title. */
-    suspend fun renameConversation(conversationId: String, title: String)
+ /** Rename a conversation's title. */
+ suspend fun renameConversation(conversationId: String, title: String)
 
-    /** Pin or unpin a conversation, floating it to the top of the list. */
-    suspend fun setPinned(conversationId: String, isPinned: Boolean)
+ /** Pin or unpin a conversation, floating it to the top of the list. */
+ suspend fun setPinned(conversationId: String, isPinned: Boolean)
+
+ /** Assign a conversation to a named group, or ungroup when [groupName] is null. */
+ suspend fun setGroup(conversationId: String, groupName: String?)
+
+ /** Distinct group names currently in use across conversations. */
+ suspend fun listGroups(): List<String>
 }

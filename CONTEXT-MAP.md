@@ -232,7 +232,9 @@ class HomeComponent(
 
 ## Recent Changes
 
-1. **Feature-oriented package layout** — Features organized into domain/application/infrastructure/presenter/theme layers instead of flat packages
+1. **Side panel module** — `SidePanelComponent` composes session (`SidePanelSessionComponent`) and setting (`SidePanelSettingComponent`) scopes; settings opens from sidebar gear / composer hint (not top bar). Conversation groups persisted via `groupName` on `ChatConversation`.
+2. **ExternalAIProviderReasoningModel** — Renamed from `ComposerReasoningLevel` (typealias retained) to match iOS externals naming.
+3. **Feature-oriented package layout** — Features organized into domain/application/infrastructure/presenter/theme layers instead of flat packages
 2. **Scope prefixes** — Added `Home…`, `Chat…`, `Onboarding…`, `SidePanel…` prefixes for clarity
 3. **Persistence entity naming** — Used `Entity` suffix for Room types, `Store` suffix for repository abstractions
 4. **Composition root pattern** — `MainActivity` creates Decompose components and injects dependencies via constructors

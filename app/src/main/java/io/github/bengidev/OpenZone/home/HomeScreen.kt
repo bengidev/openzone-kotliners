@@ -1,8 +1,8 @@
 package io.github.bengidev.openzone.home
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -23,127 +23,107 @@ import io.github.bengidev.openzone.home.presenter.HomeComposerView
 import io.github.bengidev.openzone.home.presenter.HomeTopBar
 import io.github.bengidev.openzone.home.presenter.HomeWelcomeView
 import io.github.bengidev.openzone.home.presenter.clearFocusOnTapOutside
-import io.github.bengidev.openzone.home.theme.HomeTheme
 import io.github.bengidev.openzone.home.theme.OpenZoneHomeTheme
-import io.github.bengidev.openzone.settings.SettingsScreen
 import io.github.bengidev.openzone.sidepanel.presenter.SidePanelSessionSidebarView
+import io.github.bengidev.openzone.sidepanel.presenter.SidePanelSettingScreen
 
-/**
- * Home shell — iOS `MainChat` welcome layout. Swaps between welcome
- * hero and chat-thread view based on whether the chat feature has
- * any messages (mirrors iOS `HomeView.showsWelcome`).
- *
- * The session sidebar now uses [SidePanelSessionSidebarView] from the
- * side panel module (mirrors iOS `SidePanelSessionSidebarView`).
- * Settings remains a separate overlay for now.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(
-    component: HomeComponent,
-    darkTheme: Boolean,
-    modifier: Modifier = Modifier
-) {
+fun HomeScreen(component: HomeComponent, darkTheme: Boolean, modifier: Modifier = Modifier) {
     val state by component.state.subscribeAsState()
     val chatState by component.chatComponent.state.collectAsState()
+    val sidePanel = component.sidePanelComponent
 
     OpenZoneHomeTheme(darkTheme = darkTheme) {
         OpenZoneChatTheme(darkTheme = darkTheme) {
-            Box(
-                modifier = modifier
-                    .fillMaxSize()
-                    .clearFocusOnTapOutside()
-            ) {
+            Box(modifier = modifier.fillMaxSize().clearFocusOnTapOutside()) {
                 Scaffold(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .navigationBarsPadding(),
-                    containerColor = HomeTheme.palette.background,
-                    topBar = {
-                        HomeTopBar(
-                            onSidebarToggle = component::onSidebarToggleTapped,
-                            onSettingsTapped = component::onSettingsTapped
-                        )
-                    },
-                    bottomBar = {
-                        Box(
-                            modifier = Modifier.fillMaxWidth(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            HomeComposerView(
-                                state = state,
-                                onDraftMessageChanged = component::onDraftMessageChanged,
-                                onSendTapped = component::onSendTapped,
-                                onAttachmentTapped = component::onAttachmentTapped,
-                                onMicrophoneTapped = component::onMicrophoneTapped,
-                                onConfigureApiKeyTapped = component::onSettingsTapped,
-                                onModelPopupOpen = component::onModelPopupOpen,
-                                onModelPopupDismiss = component::onModelPopupDismiss,
-                                onModelSearchQueryChanged = component::onModelSearchQueryChanged,
-                                onModelFilterFreeOnlyToggled = component::onModelFilterFreeOnlyToggled,
-                                onModelSelected = component::onModelSelected,
-                                onReasoningLevelSelected = component::onReasoningLevelSelected,
-                                onSpeedModeSelected = component::onSpeedModeSelected,
-                                onContextUsageTapped = component::onContextUsageTapped,
-                                onContextUsageDismissed = component::onContextUsageDismissed,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .widthIn(max = 620.dp)
-                                    .padding(bottom = 10.dp)
+                        modifier = Modifier.fillMaxSize().navigationBarsPadding(),
+                        containerColor =
+                                io.github.bengidev.openzone.home.theme.HomeTheme.palette.background,
+                        topBar = {
+                            HomeTopBar(
+                                    onSidebarToggle = component::onSidebarToggleTapped,
+                                    onNewConversationTapped = component::onNewConversationTapped
                             )
+                        },
+                        bottomBar = {
+                            Box(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    contentAlignment = Alignment.Center
+                            ) {
+                                HomeComposerView(
+                                        state = state,
+                                        onDraftMessageChanged = component::onDraftMessageChanged,
+                                        onSendTapped = component::onSendTapped,
+                                        onAttachmentTapped = component::onAttachmentTapped,
+                                        onMicrophoneTapped = component::onMicrophoneTapped,
+                                        onConfigureApiKeyTapped = component::onSettingsTapped,
+                                        onModelPopupOpen = component::onModelPopupOpen,
+                                        onModelPopupDismiss = component::onModelPopupDismiss,
+                                        onModelSearchQueryChanged =
+                                                component::onModelSearchQueryChanged,
+                                        onModelFilterFreeOnlyToggled =
+                                                component::onModelFilterFreeOnlyToggled,
+                                        onModelSelected = component::onModelSelected,
+                                        onReasoningLevelSelected =
+                                                component::onReasoningLevelSelected,
+                                        onSpeedModeSelected = component::onSpeedModeSelected,
+                                        onContextUsageTapped = component::onContextUsageTapped,
+                                        onContextUsageDismissed =
+                                                component::onContextUsageDismissed,
+                                        modifier =
+                                                Modifier.fillMaxWidth()
+                                                        .widthIn(max = 620.dp)
+                                                        .padding(bottom = 10.dp)
+                                )
+                            }
                         }
-                    }
                 ) { innerPadding ->
                     Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(innerPadding),
-                        contentAlignment = Alignment.TopCenter
+                            modifier = Modifier.fillMaxSize().padding(innerPadding),
+                            contentAlignment = Alignment.TopCenter
                     ) {
                         if (chatState.hasMessages) {
                             ChatThreadView(
-                                state = chatState,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .fillMaxHeight()
-                                    .widthIn(max = 680.dp)
+                                    state = chatState,
+                                    modifier =
+                                            Modifier.fillMaxWidth()
+                                                    .fillMaxHeight()
+                                                    .widthIn(max = 680.dp)
                             )
                         } else {
                             HomeWelcomeView(
-                                isChatConfigured = state.isChatConfigured,
-                                onConfigureTapped = component::onSettingsTapped,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .fillMaxHeight()
-                                    .widthIn(max = 680.dp)
-                                    .padding(horizontal = 8.dp)
+                                    isChatConfigured = state.isChatConfigured,
+                                    onConfigureTapped = component::onSettingsTapped,
+                                    modifier =
+                                            Modifier.fillMaxWidth()
+                                                    .fillMaxHeight()
+                                                    .widthIn(max = 680.dp)
+                                                    .padding(horizontal = 8.dp)
                             )
                         }
                     }
                 }
 
-                // Settings overlay (migration target: sidepanel setting scope)
-                val settingsComponent = component.settingsComponent
-                if (state.isSettingsPresented && settingsComponent != null) {
-                    SettingsScreen(
-                        component = settingsComponent,
-                        darkTheme = darkTheme,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
-
-                // Session sidebar — delegates to SidePanelSessionComponent
-                val sessionComponent = component.sidePanelSessionComponent
-                if (state.isSidebarPresented && sessionComponent != null) {
-                    SidePanelSessionSidebarView(
-                        component = sessionComponent,
-                        onConversationSelected = component::onConversationSelected,
-                        onPinTapped = { sessionComponent.onPinConversation(it) },
-                        onRenameTapped = { /* TODO: rename dialog */ },
-                        onDeleteTapped = { sessionComponent.onDeleteConversation(it) },
-                        onDismiss = component::onSidebarDismissed,
-                        modifier = Modifier.fillMaxSize()
-                    )
+                sidePanel?.let { panel ->
+                    val panelState by panel.state.subscribeAsState()
+                    if (panel.isSidebarVisible) {
+                        SidePanelSessionSidebarView(
+                                component = panel.sessionComponent,
+                                modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                    panel.setting?.let { settingComponent ->
+                        if (panelState.isSettingPresented) {
+                            SidePanelSettingScreen(
+                                    component = settingComponent,
+                                    darkTheme = darkTheme,
+                                    onDismiss = panel::dismissSettings,
+                                    modifier = Modifier.fillMaxSize()
+                            )
+                        }
+                    }
                 }
             }
         }

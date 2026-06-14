@@ -47,7 +47,7 @@ OpenZone Kotliners is a **native Android AI assistant** built with Kotlin and Je
 2. Open in Android Studio
 3. Sync Gradle and run on an emulator or physical device (API 30+)
 
-**First run**: complete the onboarding product tour. Configure your AI provider/model and API key from Settings/Home before sending messages. The app supports OpenRouter as the initial provider.
+**First run**: complete the onboarding product tour. Configure your API key from the sidebar Settings sheet (gear icon) and pick a model from the composer before sending messages. The app supports OpenRouter as the initial provider.
 
 ## Project Structure
 

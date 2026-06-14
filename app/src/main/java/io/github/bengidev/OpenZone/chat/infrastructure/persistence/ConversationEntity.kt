@@ -16,5 +16,6 @@ data class ConversationEntity(
     val title: String,
     val createdAt: Long,
     val updatedAt: Long,
-    val isPinned: Boolean = false
+    val isPinned: Boolean = false,
+    val groupName: String? = null
 )

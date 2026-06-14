@@ -4,188 +4,139 @@ import com.arkivanov.decompose.ComponentContext
 import com.arkivanov.decompose.value.MutableValue
 import com.arkivanov.decompose.value.Value
 import com.arkivanov.decompose.value.update
-import io.github.bengidev.openzone.settings.domain.ModelCatalog
-import io.github.bengidev.openzone.shared.externals.networking.ChatModel
+import io.github.bengidev.openzone.chat.infrastructure.ChatProviders
 import io.github.bengidev.openzone.shared.externals.networking.ChatProvider
-import io.github.bengidev.openzone.shared.externals.networking.ModelCatalogFetcher
-import io.github.bengidev.openzone.shared.externals.networking.ModelCatalogStore
-import io.github.bengidev.openzone.shared.externals.preference.ComposerReasoningLevel
+import io.github.bengidev.openzone.shared.externals.preference.ExternalAIProviderReasoningModel
 import io.github.bengidev.openzone.shared.externals.preference.ProviderPreferenceStore
 import io.github.bengidev.openzone.shared.externals.security.MutableCredentialStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 /**
- * Decompose component for the side panel's setting scope — app preferences
- * surface (API key entry, provider/model selection, reasoning level).
- * Mirrors iOS `SidePanelSettingFeature`.
+ * Decompose component for the side panel's setting scope — app preferences surface (API key entry,
+ * provider selection, reasoning level). Mirrors iOS `SidePanelSettingFeature`.
  */
 class SidePanelSettingComponent(
-    componentContext: ComponentContext,
-    private val providers: List<ChatProvider>,
-    private val credentialStore: MutableCredentialStore,
-    private val preferenceStore: ProviderPreferenceStore,
-    private val catalogStore: ModelCatalogStore? = null,
-    private val catalogFetcher: ModelCatalogFetcher? = null,
-    private val onClose: () -> Unit = {},
-    private val catalogTtlMs: Long = DEFAULT_CATALOG_TTL_MS,
-    private val now: () -> Long = System::currentTimeMillis,
-    private val ioDispatcher: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.IO,
-    mainScope: CoroutineScope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob())
+        componentContext: ComponentContext,
+        private val providers: List<ChatProvider> = ChatProviders.all,
+        private val credentialStore: MutableCredentialStore,
+        private val preferenceStore: ProviderPreferenceStore,
+        private val onClose: () -> Unit = {},
+        private val onCredentialsChanged: () -> Unit = {},
+        private val onReasoningModelChanged: () -> Unit = {},
+        private val onProviderChanged: (String) -> Unit = {},
+        modelSupportsReasoning: Boolean = false,
+        selectedProviderId: String? = null,
+        mainScope: CoroutineScope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob())
 ) : ComponentContext by componentContext {
 
-    data class State(
-        val providers: List<ChatProvider> = emptyList(),
-        val selectedProviderId: String? = null,
-        val models: List<ChatModel> = emptyList(),
-        val selectedModelId: String? = null,
-        val reasoningLevel: ComposerReasoningLevel = ComposerReasoningLevel.Off,
-        val apiKeyDraft: String = "",
-        val hasApiKey: Boolean = false,
-        val isLoaded: Boolean = false,
-        val isLoadingModels: Boolean = false,
-        val modelSupportsReasoning: Boolean = false
-    ) {
-        val selectedProvider: ChatProvider?
-            get() = providers.firstOrNull { it.id == selectedProviderId }
+ data class State(
+         val providers: List<ChatProvider> = emptyList(),
+         val selectedProviderId: String = ChatProviders.openRouter.id,
+         val draftApiKey: String = "",
+         val hasStoredKey: Boolean = false,
+         val errorMessage: String? = null,
+         val reasoningModel: ExternalAIProviderReasoningModel =
+                 ExternalAIProviderReasoningModel.High,
+         val modelSupportsReasoning: Boolean = false,
+         val isLoaded: Boolean = false
+ ) {
+  val canSave: Boolean
+   get() = draftApiKey.isNotBlank()
 
-        val selectedModel: ChatModel?
-            get() = models.firstOrNull { it.id == selectedModelId }
+  val selectedProvider: ChatProvider?
+   get() = providers.firstOrNull { it.id == selectedProviderId }
+ }
 
-        val canSaveKey: Boolean
-            get() = apiKeyDraft.isNotBlank()
-    }
+ private val _state =
+         MutableValue(
+                 State(
+                         providers = providers,
+                         selectedProviderId = selectedProviderId ?: ChatProviders.openRouter.id,
+                         modelSupportsReasoning = modelSupportsReasoning
+                 )
+         )
+ val state: Value<State> = _state
 
-    private val _state = MutableValue(State())
-    val state: Value<State> = _state
+ private val scope = mainScope
 
-    private val scope = mainScope
+ init {
+  scope.launch { refreshFromStore() }
+ }
 
-    init {
-        scope.launch {
-            val pref = preferenceStore.preference() ?: run {
-                _state.update { it.copy(isLoaded = true, providers = providers) }
-                return@launch
-            }
-            val providerId = pref.providerId
-            val hasKey = credentialStore.hasSecret(providerId)
-            val models = resolveAvailableModels(providerId)
-            _state.update {
-                it.copy(
-                    providers = providers,
-                    selectedProviderId = providerId,
-                    selectedModelId = pref.modelId,
-                    models = models,
-                    reasoningLevel = pref.reasoningLevel,
-                    hasApiKey = hasKey,
-                    modelSupportsReasoning = models.firstOrNull { m -> m.id == pref.modelId }?.supportsReasoning == true,
-                    isLoaded = true
-                )
-            }
-            if (hasKey) refreshCatalogIfStale(providerId)
-        }
-    }
+ fun updateMirrors(modelSupportsReasoning: Boolean, selectedProviderId: String) {
+  _state.update {
+   it.copy(modelSupportsReasoning = modelSupportsReasoning, selectedProviderId = selectedProviderId)
+  }
+ }
 
-    // ---- Intents -----------------------------------------------------------
+ fun onApiKeyDraftChanged(draft: String) {
+  _state.update { it.copy(draftApiKey = draft, errorMessage = null) }
+ }
 
-    fun onApiKeyDraftChanged(draft: String) {
-        _state.update { it.copy(apiKeyDraft = draft) }
-    }
+ fun onSaveApiKey() {
+  val draft = _state.value.draftApiKey.trim()
+  if (draft.isEmpty()) return
+  val providerId = _state.value.selectedProviderId
+  scope.launch {
+   runCatching { credentialStore.setSecret(providerId, draft) }
+           .onSuccess {
+            _state.update { it.copy(draftApiKey = "", hasStoredKey = true, errorMessage = null) }
+            onCredentialsChanged()
+           }
+           .onFailure { _state.update { it.copy(errorMessage = "Could not save API key.") } }
+  }
+ }
 
-    fun onSaveApiKey() {
-        val draft = _state.value.apiKeyDraft.trim()
-        if (draft.isEmpty()) return
-        val providerId = _state.value.selectedProviderId ?: return
-        scope.launch {
-            credentialStore.setSecret(providerId, draft)
-            _state.update { it.copy(apiKeyDraft = "", hasApiKey = true) }
-        }
-    }
+ fun onClearApiKey() {
+  val providerId = _state.value.selectedProviderId
+  scope.launch {
+   credentialStore.clear(providerId)
+   _state.update { it.copy(hasStoredKey = false, draftApiKey = "", errorMessage = null) }
+   onCredentialsChanged()
+  }
+ }
 
-    fun onClearApiKey() {
-        val providerId = _state.value.selectedProviderId ?: return
-        scope.launch {
-            credentialStore.clear(providerId)
-            _state.update { it.copy(hasApiKey = false) }
-        }
-    }
+ fun onProviderSelected(providerId: String) {
+  if (providers.none { it.id == providerId }) return
+  scope.launch {
+   preferenceStore.setProvider(providerId)
+   _state.update {
+    it.copy(
+            selectedProviderId = providerId,
+            hasStoredKey = credentialStore.hasSecret(providerId),
+            draftApiKey = ""
+    )
+   }
+   onProviderChanged(providerId)
+  }
+ }
 
-    fun onProviderSelected(providerId: String) {
-        scope.launch {
-            preferenceStore.setProvider(providerId)
-            val models = resolveAvailableModels(providerId)
-            _state.update {
-                it.copy(
-                    selectedProviderId = providerId,
-                    selectedModelId = null,
-                    models = models,
-                    modelSupportsReasoning = false,
-                    hasApiKey = credentialStore.hasSecret(providerId)
-                )
-            }
-        }
-    }
+ fun onReasoningModelSelected(level: ExternalAIProviderReasoningModel) {
+  _state.update { it.copy(reasoningModel = level) }
+  scope.launch {
+   preferenceStore.setReasoningLevel(level)
+   onReasoningModelChanged()
+  }
+ }
 
-    fun onModelSelected(modelId: String) {
-        val providerId = _state.value.selectedProviderId ?: return
-        scope.launch {
-            preferenceStore.setModel(providerId, modelId)
-            val models = _state.value.models
-            _state.update {
-                it.copy(
-                    selectedModelId = modelId,
-                    modelSupportsReasoning = models.firstOrNull { m -> m.id == modelId }?.supportsReasoning == true
-                )
-            }
-        }
-    }
+ fun onCloseTapped() {
+  onClose()
+ }
 
-    fun onReasoningLevelSelected(level: ComposerReasoningLevel) {
-        _state.update { it.copy(reasoningLevel = level) }
-        scope.launch { preferenceStore.setReasoningLevel(level) }
-    }
-
-    fun onCloseTapped() {
-        onClose()
-    }
-
-    // ---- Internal ----------------------------------------------------------
-
-    private suspend fun resolveAvailableModels(providerId: String): List<ChatModel> {
-        val cached = catalogStore?.cachedCatalog(providerId)?.models
-        return cached?.takeIf { it.isNotEmpty() } ?: ModelCatalog.forProvider(providerId)
-    }
-
-    private suspend fun refreshCatalogIfStale(providerId: String) {
-        val store = catalogStore ?: return
-        val fetcher = catalogFetcher ?: return
-        val cached = store.cachedCatalog(providerId)
-        val nowMs = now()
-        if (cached != null && !cached.isStale(nowMs, catalogTtlMs)) return
-
-        _state.update { it.copy(isLoadingModels = true) }
-        try {
-            val models = withContext(ioDispatcher) {
-                fetcher.fetchSync(providerId) ?: ModelCatalog.forProvider(providerId)
-            }
-            store.saveCatalog(providerId, models, nowMs)
-            _state.update {
-                val currentModelId = it.selectedModelId
-                it.copy(
-                    models = models,
-                    modelSupportsReasoning = models.firstOrNull { m -> m.id == currentModelId }?.supportsReasoning == true,
-                    isLoadingModels = false
-                )
-            }
-        } catch (_: Exception) {
-            _state.update { it.copy(isLoadingModels = false) }
-        }
-    }
-
-    companion object {
-        const val DEFAULT_CATALOG_TTL_MS = 300_000L
-    }
+ private suspend fun refreshFromStore() {
+  val pref = preferenceStore.preference()
+  val providerId = pref?.providerId ?: providers.firstOrNull()?.id ?: ChatProviders.openRouter.id
+  _state.update {
+   it.copy(
+           providers = providers,
+           selectedProviderId = providerId,
+           reasoningModel = pref?.reasoningLevel ?: ExternalAIProviderReasoningModel.High,
+           hasStoredKey = credentialStore.hasSecret(providerId),
+           isLoaded = true
+   )
+  }
+ }
 }

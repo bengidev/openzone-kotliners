@@ -13,10 +13,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import io.github.bengidev.openzone.home.theme.HomeTheme
@@ -33,11 +33,13 @@ fun SidePanelSettingScreen(
 ) {
     val state by component.state.subscribeAsState()
 
+    LaunchedEffect(Unit) { component.onAppear() }
+
     OpenZoneHomeTheme(darkTheme = darkTheme) {
         val palette = HomeTheme.palette
         Scaffold(
             modifier = modifier.fillMaxSize(),
-            containerColor = palette.background,
+            containerColor = palette.surfaceBase,
             topBar = {
                 TopAppBar(
                     title = {
@@ -49,14 +51,20 @@ fun SidePanelSettingScreen(
                         )
                     },
                     actions = {
-                        IconButton(onClick = {
-                            component.onCloseTapped()
-                            onDismiss()
-                        }) {
-                            Icon(Icons.Default.Close, contentDescription = "Done", tint = palette.textPrimary)
+                        IconButton(
+                            onClick = {
+                                component.onCloseTapped()
+                                onDismiss()
+                            }
+                        ) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = "Done",
+                                tint = palette.textPrimary
+                            )
                         }
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = palette.background)
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = palette.surfaceBase)
                 )
             }
         ) { innerPadding ->

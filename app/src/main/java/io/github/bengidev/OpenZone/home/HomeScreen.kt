@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.hideFromAccessibility
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import io.github.bengidev.openzone.chat.presenter.ChatThreadView
 import io.github.bengidev.openzone.chat.theme.OpenZoneChatTheme
@@ -129,17 +130,19 @@ fun HomeScreen(component: HomeComponent, darkTheme: Boolean, modifier: Modifier 
 
                 sidePanel?.let { panel ->
                     val panelState by panel.state.subscribeAsState()
-                    SidePanelSessionSidebarView(
-                            component = panel.sessionComponent,
-                            modifier = Modifier.fillMaxSize()
-                    )
+                    if (!panelState.isSettingPresented) {
+                        SidePanelSessionSidebarView(
+                                component = panel.sessionComponent,
+                                modifier = Modifier.fillMaxSize().zIndex(1f)
+                        )
+                    }
                     panel.setting?.let { settingComponent ->
                         if (panelState.isSettingPresented) {
                             SidePanelSettingScreen(
                                     component = settingComponent,
                                     darkTheme = darkTheme,
                                     onDismiss = panel::dismissSettings,
-                                    modifier = Modifier.fillMaxSize()
+                                    modifier = Modifier.fillMaxSize().zIndex(2f)
                             )
                         }
                     }

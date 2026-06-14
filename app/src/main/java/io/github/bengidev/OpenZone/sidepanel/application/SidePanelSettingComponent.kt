@@ -86,16 +86,23 @@ class SidePanelSettingComponent(
             _state.update { it.copy(draftApiKey = "", hasStoredKey = true, errorMessage = null) }
             onCredentialsChanged()
            }
-           .onFailure { _state.update { it.copy(errorMessage = "Could not save API key.") } }
+           .onFailure {
+            _state.update { it.copy(errorMessage = "Could not save the key to the Keychain.") }
+           }
   }
  }
 
  fun onClearApiKey() {
   val providerId = _state.value.selectedProviderId
   scope.launch {
-   credentialStore.clear(providerId)
-   _state.update { it.copy(hasStoredKey = false, draftApiKey = "", errorMessage = null) }
-   onCredentialsChanged()
+   runCatching { credentialStore.clear(providerId) }
+           .onSuccess {
+            _state.update { it.copy(hasStoredKey = false, draftApiKey = "", errorMessage = null) }
+            onCredentialsChanged()
+           }
+           .onFailure {
+            _state.update { it.copy(errorMessage = "Could not remove the key from the Keychain.") }
+           }
   }
  }
 
@@ -124,6 +131,10 @@ class SidePanelSettingComponent(
 
  fun onCloseTapped() {
   onClose()
+ }
+
+ fun onAppear() {
+  scope.launch { refreshFromStore() }
  }
 
  private suspend fun refreshFromStore() {

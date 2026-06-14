@@ -84,6 +84,7 @@ class SidePanelComponent(
     }
 
     fun presentSettings() {
+        sessionComponent.onDismissSidebar()
         if (settingComponent == null) {
             settingComponent = SidePanelSettingComponent(
                 componentContext = this,
@@ -115,6 +116,7 @@ class SidePanelComponent(
 
     fun dismissSettings() {
         _state.update { it.copy(isSettingPresented = false) }
+        onDelegate(Delegate.CredentialsChanged)
     }
 
     fun updateMirrors(modelSupportsReasoning: Boolean, selectedProviderId: String) {

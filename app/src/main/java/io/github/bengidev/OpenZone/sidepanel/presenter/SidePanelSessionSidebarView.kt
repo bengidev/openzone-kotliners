@@ -1,7 +1,10 @@
 package io.github.bengidev.openzone.sidepanel.presenter
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -30,21 +33,21 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.PushPin
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.outlined.Chat
 import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.Forum
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -74,6 +77,8 @@ import io.github.bengidev.openzone.sidepanel.domain.SidePanelSessionSection
 
 private const val DrawerWidthRatio = 0.82f
 private val MaxDrawerWidth = 360.dp
+private const val DrawerAnimationMillis = 280
+private val DrawerAnimationEasing = FastOutSlowInEasing
 
 /** Saved-conversation sidebar drawer. Mirrors iOS `SidePanelSessionSidebarView`. */
 @OptIn(ExperimentalFoundationApi::class)
@@ -94,94 +99,98 @@ fun SidePanelSessionSidebarView(
     Box(modifier = modifier.fillMaxSize()) {
         AnimatedVisibility(
                 visible = state.isSidebarVisible,
-                enter = slideInHorizontally(animationSpec = tween(280)) { -it },
-                exit = slideOutHorizontally(animationSpec = tween(280)) { -it }
+                enter = fadeIn(tween(DrawerAnimationMillis, easing = DrawerAnimationEasing)),
+                exit = fadeOut(tween(DrawerAnimationMillis, easing = DrawerAnimationEasing))
+        ) {
+            Box(
+                    modifier =
+                            Modifier.fillMaxSize()
+                                    .background(palette.textPrimary.copy(alpha = 0.32f))
+                                    .semantics { contentDescription = "Dismiss sidebar" }
+                                    .pointerInput(Unit) {
+                                        detectTapGestures(onTap = { component.onDismissSidebar() })
+                                    }
+            )
+        }
+
+        AnimatedVisibility(
+                visible = state.isSidebarVisible,
+                enter = slideInHorizontally(tween(DrawerAnimationMillis, easing = DrawerAnimationEasing)) { -it },
+                exit = slideOutHorizontally(tween(DrawerAnimationMillis, easing = DrawerAnimationEasing)) { -it }
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
-                Box(
-                        modifier =
-                                Modifier.fillMaxSize()
-                                        .background(palette.textPrimary.copy(alpha = 0.32f))
-                                        .semantics { contentDescription = "Dismiss sidebar" }
-                                        .pointerInput(Unit) {
-                                            detectTapGestures(
-                                                    onTap = { component.onDismissSidebar() }
-                                            )
-                                        }
-                )
-
                 Column(
                         modifier =
                                 Modifier.align(Alignment.CenterStart)
                                         .fillMaxHeight()
                                         .fillMaxWidth(DrawerWidthRatio)
                                         .widthIn(max = MaxDrawerWidth)
-                                        .statusBarsPadding()
                                         .background(palette.surfacePaper)
                                         .pointerInput(Unit) {}
                 ) {
-                    SidebarHeader(
-                            onSettingsTapped = component::onSettingsButtonTapped,
-                            onDismissTapped = component::onDismissSidebar
-                    )
+                SidebarHeader(
+                        onSettingsTapped = component::onSettingsButtonTapped,
+                        onDismissTapped = component::onDismissSidebar
+                )
 
-                    SidebarSearchField(
-                            query = state.historySearchQuery,
-                            onQueryChanged = component::onSearchQueryChanged
-                    )
+                SidebarSearchField(
+                        query = state.historySearchQuery,
+                        onQueryChanged = component::onSearchQueryChanged
+                )
 
-                    HorizontalDivider(color = palette.textTertiary.copy(alpha = 0.25f))
+                HorizontalDivider(color = palette.textTertiary.copy(alpha = 0.25f))
 
-                    when {
-                        state.conversations.isEmpty() ->
-                                EmptyState(
-                                        icon = Icons.Outlined.Chat,
-                                        title = "No conversations yet",
-                                        subtitle = "Your chats will appear here."
-                                )
-                        !state.hasSearchResults ->
-                                EmptyState(
-                                        icon = Icons.Default.Search,
-                                        title = "No matches",
-                                        subtitle = "No conversations match your search."
-                                )
-                        else ->
-                                LazyColumn(
-                                        modifier = Modifier.fillMaxWidth().weight(1f),
-                                        contentPadding =
-                                                PaddingValues(horizontal = 12.dp, vertical = 12.dp),
-                                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    state.sections.forEach { section ->
-                                        stickyHeader(key = "header-${section.id}") {
-                                            SectionHeader(
-                                                    section = section,
-                                                    isExpanded = section.isGroupExpanded,
-                                                    onGroupToggled = component::onGroupHeaderToggled
-                                            )
-                                        }
-                                        items(section.conversations, key = { it.id }) { conversation
-                                            ->
-                                            ConversationRow(
-                                                    conversation = conversation,
-                                                    isActive =
-                                                            conversation.id ==
-                                                                    state.activeConversationId,
-                                                    isInGroup = section.isGroupSection,
-                                                    onClick = {
-                                                        component.onConversationSelected(
-                                                                conversation
-                                                        )
-                                                    },
-                                                    onLongClick = { menuTarget = conversation }
-                                            )
-                                        }
+                when {
+                    state.conversations.isEmpty() ->
+                            EmptyState(
+                                    icon = Icons.Outlined.Forum,
+                                    title = "No conversations yet",
+                                    subtitle = "Your chats will appear here."
+                            )
+                    !state.hasSearchResults ->
+                            EmptyState(
+                                    icon = Icons.Outlined.Search,
+                                    title = "No matches",
+                                    subtitle = "No conversations match your search."
+                            )
+                    else ->
+                            LazyColumn(
+                                    modifier = Modifier.fillMaxWidth().weight(1f),
+                                    contentPadding =
+                                            PaddingValues(
+                                                    start = 12.dp,
+                                                    end = 12.dp,
+                                                    bottom = 12.dp
+                                            ),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                state.sections.forEach { section ->
+                                    stickyHeader(key = "header-${section.id}") {
+                                        SectionHeader(
+                                                section = section,
+                                                isExpanded = section.isGroupExpanded,
+                                                onGroupToggled = component::onGroupHeaderToggled
+                                        )
+                                    }
+                                    items(section.conversations, key = { it.id }) { conversation ->
+                                        ConversationRow(
+                                                conversation = conversation,
+                                                isActive =
+                                                        conversation.id ==
+                                                                state.activeConversationId,
+                                                isInGroup = section.isGroupSection,
+                                                onClick = {
+                                                    component.onConversationSelected(conversation)
+                                                },
+                                                onLongClick = { menuTarget = conversation }
+                                        )
                                     }
                                 }
-                    }
+                            }
                 }
             }
         }
+    }
     }
 
     menuTarget?.let { target ->
@@ -298,9 +307,11 @@ private fun SidebarHeader(onSettingsTapped: () -> Unit, onDismissTapped: () -> U
     Row(
             modifier =
                     Modifier.fillMaxWidth()
+                            .statusBarsPadding()
                             .padding(horizontal = 20.dp)
                             .padding(top = 24.dp, bottom = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text(
                 text = "History",
@@ -309,22 +320,18 @@ private fun SidebarHeader(onSettingsTapped: () -> Unit, onDismissTapped: () -> U
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.weight(1f)
         )
-        IconButton(onClick = onSettingsTapped, modifier = Modifier.size(40.dp)) {
-            Icon(
-                    imageVector = Icons.Default.Settings,
-                    contentDescription = "Settings",
-                    tint = palette.textPrimary,
-                    modifier = Modifier.size(18.dp)
-            )
-        }
-        IconButton(onClick = onDismissTapped, modifier = Modifier.size(40.dp)) {
-            Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = "Close history",
-                    tint = palette.textSecondary,
-                    modifier = Modifier.size(16.dp)
-            )
-        }
+        Icon(
+                imageVector = Icons.Outlined.Settings,
+                contentDescription = "Settings",
+                tint = palette.textPrimary,
+                modifier = Modifier.size(18.dp).clickable(onClick = onSettingsTapped)
+        )
+        Icon(
+                imageVector = Icons.Filled.Close,
+                contentDescription = "Close history",
+                tint = palette.textSecondary,
+                modifier = Modifier.size(16.dp).clickable(onClick = onDismissTapped)
+        )
     }
 }
 
@@ -342,7 +349,7 @@ private fun SidebarSearchField(query: String, onQueryChanged: (String) -> Unit) 
             horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Icon(
-                imageVector = Icons.Default.Search,
+                imageVector = Icons.Outlined.Search,
                 contentDescription = null,
                 tint = palette.textTertiary,
                 modifier = Modifier.size(14.dp)
@@ -368,14 +375,12 @@ private fun SidebarSearchField(query: String, onQueryChanged: (String) -> Unit) 
                 }
         )
         if (query.isNotEmpty()) {
-            IconButton(onClick = { onQueryChanged("") }, modifier = Modifier.size(24.dp)) {
-                Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "Clear search",
-                        tint = palette.textTertiary,
-                        modifier = Modifier.size(15.dp)
-                )
-            }
+            Icon(
+                    imageVector = Icons.Filled.Cancel,
+                    contentDescription = "Clear search",
+                    tint = palette.textTertiary,
+                    modifier = Modifier.size(15.dp).clickable { onQueryChanged("") }
+            )
         }
     }
 }
@@ -416,7 +421,7 @@ private fun SectionHeader(
                             else Icons.Default.KeyboardArrowRight,
                     contentDescription = null,
                     tint = palette.textTertiary,
-                    modifier = Modifier.size(12.dp)
+                    modifier = Modifier.size(9.dp)
             )
         }
     } else {
@@ -476,12 +481,8 @@ private fun ConversationRow(
                     Modifier.fillMaxWidth()
                             .background(bg, RoundedCornerShape(10.dp))
                             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
-                            .padding(
-                                    start = if (isInGroup) 18.dp else 12.dp,
-                                    end = 12.dp,
-                                    top = 10.dp,
-                                    bottom = 10.dp
-                            ),
+                            .padding(horizontal = 12.dp, vertical = 10.dp)
+                            .padding(start = if (isInGroup) 18.dp else 0.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {

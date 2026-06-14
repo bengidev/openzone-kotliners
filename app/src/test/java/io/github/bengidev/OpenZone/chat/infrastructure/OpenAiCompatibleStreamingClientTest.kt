@@ -37,42 +37,42 @@ class OpenAiCompatibleStreamingClientTest {
         server.shutdown()
     }
 
-    private fun provider() =
-        ChatProviders.openRouter.copy(baseUrl = server.url("/v1").toString())
+    private fun provider() = ChatProviders.openRouter.copy(baseUrl = server.url("/v1").toString())
 
     private fun client(secret: String? = "sk-test"): OpenAiCompatibleStreamingClient {
-        return OpenAiCompatibleStreamingClient(
-            credentialStore = FakeCredentialStore(secret)
-        )
+        return OpenAiCompatibleStreamingClient(credentialStore = FakeCredentialStore(secret))
     }
 
-    private fun request() = ChatRequest(
-        conversationId = "c1",
-        messages = listOf(ChatMessages.text("m1", ChatMessageRole.USER, "Hi")),
-        modelId = "deepseek/deepseek-r1:free",
-        provider = provider()
-    )
+    private fun request() =
+            ChatRequest(
+                    conversationId = "c1",
+                    messages = listOf(ChatMessages.text("m1", ChatMessageRole.USER, "Hi")),
+                    modelId = "deepseek/deepseek-r1:free",
+                    provider = provider()
+            )
 
-    private fun sse(body: String) = MockResponse()
-        .setHeader("Content-Type", "text/event-stream")
-        .setBody(body)
+    private fun sse(body: String) =
+            MockResponse().setHeader("Content-Type", "text/event-stream").setBody(body)
 
     private fun texts(events: List<ChatStreamingEvent>) =
-        events.filterIsInstance<ChatStreamingEvent.TextDelta>().joinToString("") { it.delta }
+            events.filterIsInstance<ChatStreamingEvent.TextDelta>().joinToString("") { it.delta }
 
     private fun thinking(events: List<ChatStreamingEvent>) =
-        events.filterIsInstance<ChatStreamingEvent.ThinkingDelta>().joinToString("") { it.delta }
+            events.filterIsInstance<ChatStreamingEvent.ThinkingDelta>().joinToString("") {
+                it.delta
+            }
 
     @Test
     fun `maps content deltas to text events and terminates on done`() = runTest {
         server.enqueue(
-            sse(
-                """
+                sse(
+                        """
                 data: {"choices":[{"delta":{"content":"Hel"}}]}
                 data: {"choices":[{"delta":{"content":"lo"}}]}
                 data: [DONE]
-                """.trimIndent() + "\n"
-            )
+                """.trimIndent() +
+                                "\n"
+                )
         )
 
         val events = client().stream(request()).toList()
@@ -84,13 +84,14 @@ class OpenAiCompatibleStreamingClientTest {
     @Test
     fun `maps reasoning deltas to thinking events`() = runTest {
         server.enqueue(
-            sse(
-                """
+                sse(
+                        """
                 data: {"choices":[{"delta":{"reasoning":"Let me think"}}]}
                 data: {"choices":[{"delta":{"content":"Answer"}}]}
                 data: [DONE]
-                """.trimIndent() + "\n"
-            )
+                """.trimIndent() +
+                                "\n"
+                )
         )
 
         val events = client().stream(request()).toList()
@@ -102,12 +103,13 @@ class OpenAiCompatibleStreamingClientTest {
     @Test
     fun `maps reasoning_content field to thinking events`() = runTest {
         server.enqueue(
-            sse(
-                """
+                sse(
+                        """
                 data: {"choices":[{"delta":{"reasoning_content":"hmm"}}]}
                 data: [DONE]
-                """.trimIndent() + "\n"
-            )
+                """.trimIndent() +
+                                "\n"
+                )
         )
 
         val events = client().stream(request()).toList()
@@ -117,11 +119,11 @@ class OpenAiCompatibleStreamingClientTest {
     @Test
     fun `skips comment keep-alive lines`() = runTest {
         server.enqueue(
-            sse(
-                ": OPENROUTER PROCESSING\n" +
-                    "data: {\"choices\":[{\"delta\":{\"content\":\"ok\"}}]}\n" +
-                    "data: [DONE]\n"
-            )
+                sse(
+                        ": OPENROUTER PROCESSING\n" +
+                                "data: {\"choices\":[{\"delta\":{\"content\":\"ok\"}}]}\n" +
+                                "data: [DONE]\n"
+                )
         )
 
         val events = client().stream(request()).toList()
@@ -142,9 +144,11 @@ class OpenAiCompatibleStreamingClientTest {
     @Test
     fun `maps provider error envelope to error event message`() = runTest {
         server.enqueue(
-            MockResponse()
-                .setResponseCode(400)
-                .setBody("""{"error":{"message":"Invalid model","type":"invalid_request_error"}}""")
+                MockResponse()
+                        .setResponseCode(400)
+                        .setBody(
+                                """{"error":{"message":"Invalid model","type":"invalid_request_error"}}"""
+                        )
         )
 
         val events = client().stream(request()).toList()
@@ -176,14 +180,35 @@ class OpenAiCompatibleStreamingClientTest {
     @Test
     fun `unparseable data lines are skipped without crashing`() = runTest {
         server.enqueue(
-            sse(
-                "data: not-json\n" +
-                    "data: {\"choices\":[{\"delta\":{\"content\":\"safe\"}}]}\n" +
-                    "data: [DONE]\n"
-            )
+                sse(
+                        "data: not-json\n" +
+                                "data: {\"choices\":[{\"delta\":{\"content\":\"safe\"}}]}\n" +
+                                "data: [DONE]\n"
+                )
         )
 
         val events = client().stream(request()).toList()
         assertEquals("safe", texts(events))
+    }
+
+    @Test
+    fun `whitespace-only reasoning deltas are filtered out`() = runTest {
+        server.enqueue(
+                sse(
+                        """
+                data: {"choices":[{"delta":{"reasoning":"  "}}]}
+                data: {"choices":[{"delta":{"reasoning":"\n"}}]}
+                data: {"choices":[{"delta":{"content":"Answer"}}]}
+                data: [DONE]
+                """.trimIndent() +
+                                "\n"
+                )
+        )
+
+        val events = client().stream(request()).toList()
+
+        // No ThinkingDelta events should be emitted for whitespace-only reasoning.
+        assertEquals(0, events.filterIsInstance<ChatStreamingEvent.ThinkingDelta>().size)
+        assertEquals("Answer", texts(events))
     }
 }

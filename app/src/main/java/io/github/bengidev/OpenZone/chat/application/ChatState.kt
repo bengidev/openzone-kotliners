@@ -15,8 +15,13 @@ data class ChatState(
     val draft: String = "",
     val status: ChatStreamingStatus = ChatStreamingStatus.IDLE,
     val isReasoningExpanded: Boolean = false,
-    val canSend: Boolean = false
-) {
+    val canSend: Boolean = false,
+    /** Stable ID of the in-flight reasoning row for the current turn.
+     *  Set on the first non-whitespace ThinkingDelta; nil until then.
+     *  Prevents duplicate "Thinking" rows from late reasoning deltas.
+     *  Mirrors iOS `ChatFeature.State.streamingThinkingID`. */
+    val streamingThinkingId: String? = null
+)
     val isStreaming: Boolean
         get() = status == ChatStreamingStatus.RUNNING
 

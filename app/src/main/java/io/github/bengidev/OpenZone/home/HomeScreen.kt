@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.semantics.hideFromAccessibility
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
@@ -33,12 +35,28 @@ fun HomeScreen(component: HomeComponent, darkTheme: Boolean, modifier: Modifier 
     val state by component.state.subscribeAsState()
     val chatState by component.chatComponent.state.collectAsState()
     val sidePanel = component.sidePanelComponent
+    val isSidebarVisible =
+            if (sidePanel != null) {
+                val sessionState by sidePanel.sessionComponent.state.subscribeAsState()
+                sessionState.isSidebarVisible
+            } else {
+                false
+            }
 
     OpenZoneHomeTheme(darkTheme = darkTheme) {
         OpenZoneChatTheme(darkTheme = darkTheme) {
             Box(modifier = modifier.fillMaxSize().clearFocusOnTapOutside()) {
                 Scaffold(
-                        modifier = Modifier.fillMaxSize().navigationBarsPadding(),
+                        modifier =
+                                Modifier.fillMaxSize()
+                                        .navigationBarsPadding()
+                                        .then(
+                                                if (isSidebarVisible) {
+                                                    Modifier.semantics { hideFromAccessibility() }
+                                                } else {
+                                                    Modifier
+                                                }
+                                        ),
                         containerColor =
                                 io.github.bengidev.openzone.home.theme.HomeTheme.palette.background,
                         topBar = {
@@ -108,13 +126,10 @@ fun HomeScreen(component: HomeComponent, darkTheme: Boolean, modifier: Modifier 
 
                 sidePanel?.let { panel ->
                     val panelState by panel.state.subscribeAsState()
-                    val sessionState by panel.sessionComponent.state.subscribeAsState()
-                    if (sessionState.isSidebarVisible) {
-                        SidePanelSessionSidebarView(
-                                component = panel.sessionComponent,
-                                modifier = Modifier.fillMaxSize()
-                        )
-                    }
+                    SidePanelSessionSidebarView(
+                            component = panel.sessionComponent,
+                            modifier = Modifier.fillMaxSize()
+                    )
                     panel.setting?.let { settingComponent ->
                         if (panelState.isSettingPresented) {
                             SidePanelSettingScreen(

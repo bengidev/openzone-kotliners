@@ -65,6 +65,10 @@ class SidePanelSessionComponent(
 
  private val scope = mainScope
 
+ init {
+  scope.launch { reloadConversations() }
+ }
+
  fun onToggleSidebar() {
   val isVisible = !_state.value.isSidebarVisible
   _state.update { it.copy(isSidebarVisible = isVisible) }

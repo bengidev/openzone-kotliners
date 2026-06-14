@@ -7,8 +7,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.ui.semantics.hideFromAccessibility
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
@@ -16,6 +14,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.hideFromAccessibility
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import io.github.bengidev.openzone.chat.presenter.ChatThreadView
@@ -45,7 +45,7 @@ fun HomeScreen(component: HomeComponent, darkTheme: Boolean, modifier: Modifier 
 
     OpenZoneHomeTheme(darkTheme = darkTheme) {
         OpenZoneChatTheme(darkTheme = darkTheme) {
-            Box(modifier = modifier.fillMaxSize().clearFocusOnTapOutside()) {
+            Box(modifier = modifier.fillMaxSize()) {
                 Scaffold(
                         modifier =
                                 Modifier.fillMaxSize()
@@ -99,7 +99,10 @@ fun HomeScreen(component: HomeComponent, darkTheme: Boolean, modifier: Modifier 
                         }
                 ) { innerPadding ->
                     Box(
-                            modifier = Modifier.fillMaxSize().padding(innerPadding),
+                            modifier =
+                                    Modifier.fillMaxSize()
+                                            .padding(innerPadding)
+                                            .clearFocusOnTapOutside(),
                             contentAlignment = Alignment.TopCenter
                     ) {
                         if (chatState.hasMessages) {

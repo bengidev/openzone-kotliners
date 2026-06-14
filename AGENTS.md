@@ -46,7 +46,7 @@ Five canonical roles mapped 1:1 to label strings of the same name. See [docs/age
 
 ## Domain docs
 
-Multi-context: [CONTEXT-MAP.md](CONTEXT-MAP.md) points to per-context `CONTEXT.md` files in `docs/contexts/`; system-wide ADRs in [docs/adr/](docs/adr/); module layout rules in [docs/architecture/modules.md](docs/architecture/modules.md). See [docs/agents/domain.md](docs/agents/domain.md).
+Multi-context: [CONTEXT-MAP.md](CONTEXT-MAP.md) indexes glossaries under `docs/contexts/`; system-wide ADRs in [docs/adr/](docs/adr/); module layout rules in [docs/architecture/modules.md](docs/architecture/modules.md). See [docs/agents/domain.md](docs/agents/domain.md).
 
 ## Deprecated packages
 

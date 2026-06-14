@@ -1,8 +1,9 @@
+[docs/agents/triage-labels.md#AC05]
 # Triage Labels
 
 The skills speak in terms of five canonical triage roles. This file maps those roles to the actual label strings used in this repo's issue tracker.
 
-| Label in real-engineer/skills | Label in our tracker | Meaning                                  |
+| Label in real-engineer | Label in our tracker | Meaning                                  |
 | ----------------------------- | -------------------- | ---------------------------------------- |
 | `needs-triage`                | `needs-triage`       | Maintainer needs to evaluate this issue  |
 | `needs-info`                  | `needs-info`         | Waiting on reporter for more information |
@@ -12,4 +13,6 @@ The skills speak in terms of five canonical triage roles. This file maps those r
 
 When a skill mentions a role (e.g. "apply the AFK-ready triage label"), use the corresponding label string from this table.
 
-Create these labels in GitHub if they do not exist yet: **Settings → Labels**, or `gh label create <name>`.
+Edit the right-hand column to match whatever vocabulary you actually use.
+
+Create missing labels in GitHub if needed: **Settings → Labels**, or `gh label create <name>`.

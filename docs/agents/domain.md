@@ -1,14 +1,14 @@
 # Domain Docs
 
-How engineering skills and agents should consume domain documentation in this repo.
+How the engineering skills should consume this repo's domain documentation when exploring the codebase.
 
 ## Layout: multi-context
 
 OpenZone uses a **multi-context** layout. Start at the repo root:
 
 1. Read **`CONTEXT-MAP.md`** to see which contexts exist and where their glossaries live.
-2. Open the **`CONTEXT.md`** for the area you are changing.
-3. Read **`docs/adr/`** for system-wide architectural decisions.
+2. Open the relevant glossary under **`docs/contexts/`** for the area you are changing (e.g. `docs/contexts/chat/Chat-CONTEXT.md`).
+3. Read **`docs/adr/`** for system-wide architectural decisions. For context-specific ADRs, check `<feature-path>/docs/adr/` when that directory exists.
 4. Read **`docs/architecture/modules.md`** — read this before changing feature boundaries, shared UI/theme code, or Decompose component structure.
 5. Read **`docs/architecture/coroutine-concurrency.md`** — read this before changing Kotlin code that touches concurrency, dispatcher choice, flows, or persistence.
 
@@ -18,7 +18,7 @@ If any of these files don't exist, **proceed silently**. Don't flag their absenc
 
 ```text
 /
-├── CONTEXT-MAP.md                              # Index of contexts → CONTEXT.md paths
+├── CONTEXT-MAP.md                              # Index of contexts → glossary paths
 ├── docs/
 │   ├── adr/                                    # System-wide ADRs
 │   ├── architecture/
@@ -51,12 +51,12 @@ If any of these files don't exist, **proceed silently**. Don't flag their absenc
 
 ## Use the glossary's vocabulary
 
-When output names a domain concept (issue title, refactor proposal, test name), use the term as defined in the relevant `CONTEXT.md`. Do not drift to synonyms the glossary explicitly avoids.
+When your output names a domain concept (in an issue title, a refactor proposal, a hypothesis, a test name), use the term as defined in the relevant `docs/contexts/` glossary. Don't drift to synonyms the glossary explicitly avoids.
 
-If the concept is not in the glossary, either reconsider the naming or note the gap for a future glossary update.
+If the concept you need isn't in the glossary yet, that's a signal — either you're inventing language the project doesn't use (reconsider) or there's a real gap (note it for `/grill-with-docs`).
 
 ## Flag ADR conflicts
 
-If output contradicts an existing ADR, surface it explicitly rather than silently overriding:
+If your output contradicts an existing ADR, surface it explicitly rather than silently overriding:
 
 > *Contradicts ADR-0001 (shared cross-cutting infra) — worth reopening because…*

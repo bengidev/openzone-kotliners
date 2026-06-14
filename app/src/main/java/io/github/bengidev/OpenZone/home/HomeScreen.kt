@@ -108,7 +108,8 @@ fun HomeScreen(component: HomeComponent, darkTheme: Boolean, modifier: Modifier 
 
                 sidePanel?.let { panel ->
                     val panelState by panel.state.subscribeAsState()
-                    if (panel.isSidebarVisible) {
+                    val sessionState by panel.sessionComponent.state.subscribeAsState()
+                    if (sessionState.isSidebarVisible) {
                         SidePanelSessionSidebarView(
                                 component = panel.sessionComponent,
                                 modifier = Modifier.fillMaxSize()

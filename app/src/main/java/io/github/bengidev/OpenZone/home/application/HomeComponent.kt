@@ -211,6 +211,8 @@ class HomeComponent(
  }
 
  fun onNewConversationTapped() {
+  sidePanelComponent?.onSidebarDismissed()
+  _state.update { it.copy(draftMessage = "") }
   chatComponent.resetToNewConversation()
  }
 

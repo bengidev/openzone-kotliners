@@ -12,6 +12,8 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -21,7 +23,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -38,7 +39,6 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Chat
 import androidx.compose.material.icons.outlined.Folder
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -57,6 +57,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -148,10 +149,7 @@ fun SidePanelSessionSidebarView(
                                 LazyColumn(
                                         modifier = Modifier.fillMaxWidth().weight(1f),
                                         contentPadding =
-                                                androidx.compose.foundation.layout.PaddingValues(
-                                                        horizontal = 12.dp,
-                                                        vertical = 12.dp
-                                                ),
+                                                PaddingValues(horizontal = 12.dp, vertical = 12.dp),
                                         verticalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
                                     state.sections.forEach { section ->
@@ -437,7 +435,7 @@ private fun SectionHeader(
 }
 
 @Composable
-private fun EmptyState(icon: ImageVector, title: String, subtitle: String) {
+private fun ColumnScope.EmptyState(icon: ImageVector, title: String, subtitle: String) {
     val palette = HomeTheme.palette
     Column(
             modifier = Modifier.fillMaxWidth().weight(1f).padding(horizontal = 20.dp),

@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -37,6 +38,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Chat
 import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -132,17 +134,13 @@ fun SidePanelSessionSidebarView(
                     when {
                         state.conversations.isEmpty() ->
                                 EmptyState(
-                                        icon = {
-                                            Icon(Icons.Outlined.Chat, contentDescription = null)
-                                        },
+                                        icon = Icons.Outlined.Chat,
                                         title = "No conversations yet",
                                         subtitle = "Your chats will appear here."
                                 )
                         !state.hasSearchResults ->
                                 EmptyState(
-                                        icon = {
-                                            Icon(Icons.Default.Search, contentDescription = null)
-                                        },
+                                        icon = Icons.Default.Search,
                                         title = "No matches",
                                         subtitle = "No conversations match your search."
                                 )
@@ -439,19 +437,19 @@ private fun SectionHeader(
 }
 
 @Composable
-private fun EmptyState(
-    iconTint: Color,
-    icon: @Composable (Color) -> Unit,
-    title: String,
-    subtitle: String
-) {
+private fun EmptyState(icon: ImageVector, title: String, subtitle: String) {
     val palette = HomeTheme.palette
     Column(
-        modifier = Modifier.fillMaxWidth().weight(1f).padding(horizontal = 20.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+            modifier = Modifier.fillMaxWidth().weight(1f).padding(horizontal = 20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
     ) {
-        icon(iconTint)
+        Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = palette.textTertiary,
+                modifier = Modifier.size(28.dp)
+        )
         Spacer(Modifier.height(8.dp))
         Text(
                 text = title,

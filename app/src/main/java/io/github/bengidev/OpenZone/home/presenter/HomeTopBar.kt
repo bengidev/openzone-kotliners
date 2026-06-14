@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Menu
@@ -26,7 +27,10 @@ fun HomeTopBar(
     val palette = HomeTheme.palette
 
     Row(
-            modifier = modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
+            modifier =
+                    modifier.fillMaxWidth()
+                            .statusBarsPadding()
+                            .padding(horizontal = 20.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
     ) {
         IconButton(onClick = onSidebarToggle, modifier = Modifier.size(44.dp)) {

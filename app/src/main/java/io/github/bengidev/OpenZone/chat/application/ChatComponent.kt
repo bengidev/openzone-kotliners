@@ -162,11 +162,13 @@ class ChatComponent(
  fun onStopTapped() {
   streamJob?.cancel()
   streamJob = null
-  state.copy(
-          status = ChatStreamingStatus.DONE,
-          streamingThinkingId = null,
-          messages = state.messages.markAssistantTurnsComplete()
-  )
+  _state.update { state ->
+   state.copy(
+           status = ChatStreamingStatus.DONE,
+           streamingThinkingId = null,
+           messages = state.messages.markAssistantTurnsComplete()
+   )
+  }
  }
 
  fun onClearThread() {

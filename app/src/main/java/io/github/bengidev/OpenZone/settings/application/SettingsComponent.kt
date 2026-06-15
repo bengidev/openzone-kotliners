@@ -78,7 +78,7 @@ class SettingsComponent(
                     selectedProviderId = providerId,
                     models = models,
                     selectedModelId = modelId,
-                    reasoningLevel = persisted?.reasoningLevel ?: ComposerReasoningLevel.Off,
+                    reasoningLevel = persisted?.reasoningLevel ?: ComposerReasoningLevel.High,
                     hasApiKey = providerId?.let(credentialStore::hasSecret) ?: false,
                     isLoaded = true
                 )

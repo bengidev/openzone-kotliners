@@ -43,24 +43,45 @@ internal data class WireMessage(
 /** One streamed chunk: `data: {"choices":[{"delta":{...}}]}`. */
 @Serializable
 internal data class ChatCompletionChunk(
-    val choices: List<WireChoice> = emptyList()
+    val choices: List<WireChoice> = emptyList(),
+    val error: WireError? = null
 )
 
 @Serializable
 internal data class WireChoice(
     val delta: WireDelta = WireDelta(),
+    val message: WireMessage? = null,
     @SerialName("finish_reason") val finishReason: String? = null
 )
+
+/** One item in OpenRouter's `reasoning_details` array (streaming + final). */
+@Serializable
+internal data class WireReasoningDetail(
+    val type: String? = null,
+    val text: String? = null,
+    val summary: String? = null
+) {
+    /** Extracts human-readable reasoning text from a detail object. */
+    val thinkingText: String?
+        get() =
+                when (type) {
+                    "reasoning.text" -> text
+                    "reasoning.summary" -> summary
+                    else -> text ?: summary
+                }
+}
 
 /**
  * Delta payload. `content` is the answer text; `reasoning` (OpenRouter) and
  * `reasoning_content` (some OpenAI-compatible providers) carry chain-of-thought.
+ * Newer OpenRouter reasoning models also stream via `reasoning_details`.
  */
 @Serializable
 internal data class WireDelta(
     val content: String? = null,
     val reasoning: String? = null,
-    @SerialName("reasoning_content") val reasoningContent: String? = null
+    @SerialName("reasoning_content") val reasoningContent: String? = null,
+    @SerialName("reasoning_details") val reasoningDetails: List<WireReasoningDetail>? = null
 ) {
     /** Reasoning text under whichever field the provider used. */
     val reasoningText: String?

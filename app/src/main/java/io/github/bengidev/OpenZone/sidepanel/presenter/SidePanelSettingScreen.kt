@@ -3,13 +3,10 @@ package io.github.bengidev.openzone.sidepanel.presenter
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -51,17 +48,13 @@ fun SidePanelSettingScreen(
                         )
                     },
                     actions = {
-                        IconButton(
+                        TextButton(
                             onClick = {
                                 component.onCloseTapped()
                                 onDismiss()
                             }
                         ) {
-                            Icon(
-                                Icons.Default.Close,
-                                contentDescription = "Done",
-                                tint = palette.textPrimary
-                            )
+                            Text("Done", color = palette.textPrimary, fontSize = 16.sp)
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = palette.surfaceBase)

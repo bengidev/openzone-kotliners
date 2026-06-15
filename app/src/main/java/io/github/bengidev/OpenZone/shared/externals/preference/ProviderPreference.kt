@@ -10,11 +10,10 @@ import io.github.bengidev.openzone.shared.externals.preference.ComposerReasoning
  * @property providerId stable [ChatProvider.id] the user selected.
  * @property modelId provider model identifier, or `null` when no model chosen.
  * @property reasoningLevel the persisted reasoning effort level; defaults to
- *   [ComposerReasoningLevel.Off] so new installs never accidentally send a
- *   reasoning parameter to non-reasoning models.
+ *   [ComposerReasoningLevel.High] to match iOS `ExternalAIProviderPreference`.
  */
 data class ProviderPreference(
     val providerId: String,
     val modelId: String? = null,
-    val reasoningLevel: ComposerReasoningLevel = ComposerReasoningLevel.Off
+    val reasoningLevel: ComposerReasoningLevel = ComposerReasoningLevel.High
 )

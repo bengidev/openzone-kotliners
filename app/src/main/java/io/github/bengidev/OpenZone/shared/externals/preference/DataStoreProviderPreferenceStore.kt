@@ -55,13 +55,13 @@ class DataStoreProviderPreferenceStore(
             providerId = providerId,
             modelId = this[KEY_MODEL_ID],
             reasoningLevel = this[KEY_REASONING_LEVEL]?.let(::reasoningLevelFromName)
-                ?: ComposerReasoningLevel.Off
+                ?: ComposerReasoningLevel.High
         )
     }
 
-    /** Tolerant parse: an unknown/legacy persisted value falls back to [ComposerReasoningLevel.Off]. */
+    /** Tolerant parse: an unknown/legacy persisted value falls back to [ComposerReasoningLevel.High]. */
     private fun reasoningLevelFromName(name: String): ComposerReasoningLevel =
-        ComposerReasoningLevel.entries.firstOrNull { it.name == name } ?: ComposerReasoningLevel.Off
+        ComposerReasoningLevel.entries.firstOrNull { it.name == name } ?: ComposerReasoningLevel.High
 
     companion object {
         private val KEY_PROVIDER_ID = stringPreferencesKey("provider_id")

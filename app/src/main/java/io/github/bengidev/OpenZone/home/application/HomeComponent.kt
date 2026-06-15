@@ -9,9 +9,8 @@ import io.github.bengidev.openzone.chat.application.ChatState
 import io.github.bengidev.openzone.chat.infrastructure.ChatAPIClient
 import io.github.bengidev.openzone.chat.infrastructure.ChatHistoryStore
 import io.github.bengidev.openzone.chat.infrastructure.ChatProviders
-import io.github.bengidev.openzone.chat.infrastructure.OpenAiCompatibleStreamingClient
+import io.github.bengidev.openzone.chat.infrastructure.ChatOpenAICompatibleStreamingClient
 import io.github.bengidev.openzone.home.domain.ComposerSpeedMode
-import io.github.bengidev.openzone.settings.domain.ModelCatalog
 import io.github.bengidev.openzone.shared.externals.networking.ChatModel
 import io.github.bengidev.openzone.shared.externals.networking.ChatProvider
 import io.github.bengidev.openzone.shared.externals.networking.ModelCatalogFetcher
@@ -54,8 +53,8 @@ class HomeComponent(
 
  private val resolvedApiClient: ChatAPIClient =
          apiClient
-                 ?: credentialStore?.let { OpenAiCompatibleStreamingClient(credentialStore = it) }
-                         ?: OpenAiCompatibleStreamingClient(credentialStore = EmptyCredentialStore)
+                 ?: credentialStore?.let { ChatOpenAICompatibleStreamingClient(credentialStore = it) }
+                         ?: ChatOpenAICompatibleStreamingClient(credentialStore = EmptyCredentialStore)
 
  @Volatile private var preference: ProviderPreference? = null
 
@@ -64,7 +63,7 @@ class HomeComponent(
                          apiClient = resolvedApiClient,
                          scope = chatScope,
                          resolveProvider = { resolveProvider() },
-                         resolveModelId = { preference?.modelId },
+                         resolveModelId = { preference?.modelId ?: _state.value.selectedModelId },
                          resolveReasoningLevel = { resolveReasoningLevel() },
                          canStartSend = { isChatConfigured() },
                          historyStore = historyStore
@@ -84,36 +83,109 @@ class HomeComponent(
          } else null
 
  private var debounceJob: Job? = null
+ private var shouldAutoSelectDefaultModel = true
 
  init {
   preferenceStore
           ?.preferenceFlow
-          ?.onEach { pref ->
-           preference = pref
-           val providerId = pref?.providerId
-           val modelId = pref?.modelId
-           val models = providerId?.let { resolveAvailableModels(it) } ?: emptyList()
-           val reasoning = pref?.reasoningLevel ?: ExternalAIProviderReasoningModel.Off
-           val supportsReasoning =
-                   models.firstOrNull { it.id == modelId }?.supportsReasoning == true
-           sidePanelComponent?.updateMirrors(
-                   modelSupportsReasoning = supportsReasoning,
-                   selectedProviderId = providerId
-                                   ?: providers.firstOrNull()?.id ?: ChatProviders.openRouter.id
-           )
-           _state.update {
-            it.copy(
-                    availableModels = models,
-                    selectedModelId = modelId,
-                    reasoningLevel = reasoning,
-                    isChatConfigured = isChatConfigured(),
-                    hasApiKey = hasApiKey(),
-                    hasLoadedPreference = true
-            )
+          ?.onEach { pref -> applyPreference(pref) }
+          ?.launchIn(chatScope)
+
+  chatComponent.state
+          .onEach { chat ->
+           _state.update { home ->
+            if (home.isSending == chat.isStreaming &&
+                            home.streamErrorMessage == chat.streamErrorMessage &&
+                            home.chatStreamingStatus == chat.status
+            ) {
+             home
+            } else {
+             home.copy(
+                     isSending = chat.isStreaming,
+                     streamErrorMessage = chat.streamErrorMessage,
+                     chatStreamingStatus = chat.status
+             )
+            }
            }
           }
-          ?.launchIn(chatScope)
+          .launchIn(chatScope)
  }
+
+ fun onAppear() {
+  refreshCredentialGate()
+  chatScope.launch { bootstrapModelsForCurrentProvider() }
+ }
+
+ private suspend fun bootstrapModelsForCurrentProvider() {
+  val providerId = resolvedProviderId()
+  val models = resolveAvailableModels(providerId)
+  _state.update { it.copy(availableModels = models, selectedProviderId = providerId) }
+  reconcileModelSelection(allowAutoSelect = shouldAutoSelectDefaultModel)
+  shouldAutoSelectDefaultModel = false
+  refreshCatalog(providerId)
+ }
+
+ private fun applyPreference(pref: ProviderPreference?) {
+  preference = pref
+  val providerId = resolvedProviderId(pref)
+  val modelId = pref?.modelId
+  shouldAutoSelectDefaultModel = pref?.modelId == null
+  chatScope.launch {
+   val models = resolveAvailableModels(providerId)
+   val reasoning = pref?.reasoningLevel ?: ExternalAIProviderReasoningModel.High
+   val hasKey = hasApiKey(providerId)
+   _state.update {
+    it.copy(
+            availableModels = models,
+            selectedModelId = modelId?.takeIf { hasKey },
+            selectedProviderId = providerId,
+            reasoningLevel = reasoning,
+            isChatConfigured = isChatConfigured(),
+            hasApiKey = hasKey,
+            hasLoadedPreference = true
+    )
+   }
+   reconcileModelSelection(allowAutoSelect = shouldAutoSelectDefaultModel)
+   shouldAutoSelectDefaultModel = false
+   updateSidePanelMirrors()
+  }
+ }
+
+ private fun reconcileModelSelection(allowAutoSelect: Boolean) {
+  val models = _state.value.availableModels
+  if (models.isEmpty()) return
+
+  val currentId = _state.value.selectedModelId ?: preference?.modelId
+  if (!currentId.isNullOrBlank() && models.any { it.id == currentId }) {
+   if (_state.value.selectedModelId != currentId) {
+    _state.update { it.copy(selectedModelId = currentId, isChatConfigured = isChatConfigured()) }
+   }
+   return
+  }
+
+  if (!allowAutoSelect) return
+
+  val defaultModel = models.first()
+  val providerId = _state.value.selectedProviderId
+  _state.update {
+   it.copy(selectedModelId = defaultModel.id, isChatConfigured = isChatConfigured())
+  }
+  preference =
+          preference?.copy(providerId = providerId, modelId = defaultModel.id)
+                  ?: ProviderPreference(providerId = providerId, modelId = defaultModel.id)
+  chatScope.launch { preferenceStore?.setModel(providerId, defaultModel.id) }
+ }
+
+ private fun updateSidePanelMirrors() {
+  val state = _state.value
+  sidePanelComponent?.updateMirrors(
+          modelSupportsReasoning = state.selectedModelSupportsReasoning,
+          selectedProviderId = state.selectedProviderId
+  )
+ }
+
+ private fun resolvedProviderId(pref: ProviderPreference? = preference): String =
+         pref?.providerId ?: providers.firstOrNull()?.id ?: ChatProviders.openRouter.id
 
  private fun handleSidePanelDelegate(delegate: SidePanelComponent.Delegate) {
   when (delegate) {
@@ -130,21 +202,39 @@ class HomeComponent(
      chatComponent.resetToNewConversation()
     }
    }
-   SidePanelComponent.Delegate.CredentialsChanged -> refreshCredentialGate()
+   SidePanelComponent.Delegate.CredentialsChanged -> {
+    refreshCredentialGate()
+    if (hasApiKey()) {
+     chatScope.launch {
+      val providerId = resolvedProviderId()
+      refreshCatalog(providerId)
+      reconcileModelSelection(allowAutoSelect = preference?.modelId == null)
+     }
+    }
+   }
    SidePanelComponent.Delegate.ReasoningModelChanged -> {
     chatScope.launch {
      val level =
-             preferenceStore?.preference()?.reasoningLevel ?: ExternalAIProviderReasoningModel.Off
+             preferenceStore?.preference()?.reasoningLevel
+                     ?: _state.value.reasoningLevel
      _state.update { it.copy(reasoningLevel = level) }
     }
    }
    is SidePanelComponent.Delegate.ProviderChanged -> {
     chatScope.launch {
+     shouldAutoSelectDefaultModel = true
      preferenceStore?.setProvider(delegate.providerId)
      val models = resolveAvailableModels(delegate.providerId)
      _state.update {
-      it.copy(availableModels = models, selectedModelId = null, isChatConfigured = false)
+      it.copy(
+              availableModels = models,
+              selectedModelId = null,
+              selectedProviderId = delegate.providerId,
+              isChatConfigured = false
+      )
      }
+     reconcileModelSelection(allowAutoSelect = true)
+     shouldAutoSelectDefaultModel = false
      sidePanelComponent?.updateMirrors(
              modelSupportsReasoning = false,
              selectedProviderId = delegate.providerId
@@ -157,17 +247,28 @@ class HomeComponent(
  }
 
  private fun refreshCredentialGate() {
-  _state.update { it.copy(hasApiKey = hasApiKey(), isChatConfigured = isChatConfigured()) }
+  val hasKey = hasApiKey()
+  _state.update {
+   it.copy(
+           hasApiKey = hasKey,
+           isChatConfigured = isChatConfigured(),
+           availableModels = if (hasKey) it.availableModels else emptyList(),
+           selectedModelId = if (hasKey) it.selectedModelId else null,
+           isContextUsagePresented = if (hasKey) it.isContextUsagePresented else false
+   )
+  }
  }
 
  private suspend fun refreshCatalog(providerId: String) {
   val store = catalogStore ?: return
   val fetcher = catalogFetcher ?: return
   if (credentialStore?.hasSecret(providerId) != true) return
-  runCatching { fetcher.fetchSync(providerId) ?: ModelCatalog.forProvider(providerId) }.onSuccess {
-          models ->
+  runCatching { fetcher.fetchSync(providerId) }.onSuccess { models ->
+   if (models.isNullOrEmpty()) return@onSuccess
    store.saveCatalog(providerId, models, System.currentTimeMillis())
    _state.update { it.copy(availableModels = models) }
+   reconcileModelSelection(allowAutoSelect = false)
+   updateSidePanelMirrors()
   }
  }
 
@@ -178,22 +279,20 @@ class HomeComponent(
  }
 
  private fun resolveReasoningLevel(): ExternalAIProviderReasoningModel =
-         preference?.reasoningLevel ?: ExternalAIProviderReasoningModel.Off
+         _state.value.reasoningLevel
 
  private fun isChatConfigured(): Boolean {
-  val pref = preference ?: return false
-  if (pref.modelId.isNullOrBlank()) return false
-  return credentialStore?.hasSecret(pref.providerId) == true
+  val modelId = preference?.modelId ?: _state.value.selectedModelId
+  if (modelId.isNullOrBlank()) return false
+  return hasApiKey()
  }
 
- private fun hasApiKey(): Boolean {
-  val providerId = preference?.providerId ?: providers.firstOrNull()?.id ?: return false
-  return credentialStore?.hasSecret(providerId) == true
- }
+ private fun hasApiKey(providerId: String = resolvedProviderId()): Boolean =
+         credentialStore?.hasSecret(providerId) == true
 
  private suspend fun resolveAvailableModels(providerId: String): List<ChatModel> {
-  val cached = catalogStore?.cachedCatalog(providerId)?.models
-  return cached?.takeIf { it.isNotEmpty() } ?: ModelCatalog.forProvider(providerId)
+  if (!hasApiKey(providerId)) return emptyList()
+  return catalogStore?.cachedCatalog(providerId)?.models?.takeIf { it.isNotEmpty() } ?: emptyList()
  }
 
  fun onSettingsTapped() {
@@ -230,11 +329,22 @@ class HomeComponent(
  }
 
  fun onStopTapped() = chatComponent.onStopTapped()
+ fun onRetryTapped() = chatComponent.onRetryTapped()
+ fun onErrorDismissed() = chatComponent.onErrorDismissed()
  fun onClearThread() = chatComponent.onClearThread()
 
  fun onModelPopupOpen() {
+  val freeDefault = _state.value.selectedProviderId == ChatProviders.openRouter.id
   _state.update {
-   it.copy(isModelPopupPresented = true, modelSearchQuery = "", debouncedModelQuery = "")
+   it.copy(
+           isModelPopupPresented = true,
+           modelSearchQuery = "",
+           debouncedModelQuery = "",
+           modelFilterFreeOnly = if (freeDefault) true else it.modelFilterFreeOnly
+   )
+  }
+  if (hasApiKey() && _state.value.availableModels.isEmpty()) {
+   chatScope.launch { refreshCatalog(resolvedProviderId()) }
   }
  }
 
@@ -252,19 +362,16 @@ class HomeComponent(
           }
  }
 
- fun onModelFilterFreeOnlyToggled() {
-  _state.update { it.copy(modelFilterFreeOnly = !it.modelFilterFreeOnly) }
+ fun onModelFilterFreeOnlyChanged(freeOnly: Boolean) {
+  _state.update { it.copy(modelFilterFreeOnly = freeOnly) }
  }
 
  fun onModelSelected(modelId: String) {
-  val providerId = preference?.providerId ?: providers.firstOrNull()?.id ?: return
-  _state.update { it.copy(selectedModelId = modelId, isModelPopupPresented = false) }
-  val supportsReasoning =
-          _state.value.availableModels.firstOrNull { it.id == modelId }?.supportsReasoning == true
-  sidePanelComponent?.updateMirrors(
-          modelSupportsReasoning = supportsReasoning,
-          selectedProviderId = providerId
-  )
+  val providerId = resolvedProviderId()
+  _state.update {
+   it.copy(selectedModelId = modelId, isModelPopupPresented = false, isChatConfigured = isChatConfigured())
+  }
+  updateSidePanelMirrors()
   chatScope.launch { preferenceStore?.setModel(providerId, modelId) }
  }
 

@@ -28,7 +28,7 @@ data class SettingsState(
     val selectedProviderId: String? = null,
     val models: List<ChatModel> = emptyList(),
     val selectedModelId: String? = null,
-    val reasoningLevel: ComposerReasoningLevel = ComposerReasoningLevel.Off,
+    val reasoningLevel: ComposerReasoningLevel = ComposerReasoningLevel.High,
     val apiKeyDraft: String = "",
     val hasApiKey: Boolean = false,
     val isLoaded: Boolean = false,

@@ -41,6 +41,7 @@ fun ChatMessageRowView(
     message: ChatMessage,
     isLastAssistantMessage: Boolean,
     streamingStatus: ChatStreamingStatus,
+    streamErrorMessage: String? = null,
     modifier: Modifier = Modifier
 ) {
     when (message) {
@@ -48,6 +49,7 @@ fun ChatMessageRowView(
             message = message.message,
             isLastAssistantMessage = isLastAssistantMessage,
             streamingStatus = streamingStatus,
+            streamErrorMessage = streamErrorMessage,
             modifier = modifier
         )
         is ChatMessage.Thinking -> AssistantSurround(modifier) {
@@ -65,6 +67,7 @@ private fun TextRow(
     message: ChatTextMessage,
     isLastAssistantMessage: Boolean,
     streamingStatus: ChatStreamingStatus,
+    streamErrorMessage: String?,
     modifier: Modifier = Modifier
 ) {
     if (message.role == ChatMessageRole.USER) {
@@ -74,6 +77,7 @@ private fun TextRow(
             message = message,
             isLastAssistantMessage = isLastAssistantMessage,
             streamingStatus = streamingStatus,
+            streamErrorMessage = streamErrorMessage,
             modifier = modifier
         )
     }
@@ -117,6 +121,7 @@ private fun AssistantRow(
     message: ChatTextMessage,
     isLastAssistantMessage: Boolean,
     streamingStatus: ChatStreamingStatus,
+    streamErrorMessage: String?,
     modifier: Modifier = Modifier
 ) {
     val palette = ChatTheme.palette
@@ -151,6 +156,7 @@ private fun AssistantRow(
         if (isLastAssistantMessage) {
             AssistantMetaRow(
                 streamingStatus = streamingStatus,
+                streamErrorMessage = streamErrorMessage,
                 isComplete = message.isComplete,
                 timestamp = message.timestamp
             )
@@ -161,6 +167,7 @@ private fun AssistantRow(
 @Composable
 private fun AssistantMetaRow(
     streamingStatus: ChatStreamingStatus,
+    streamErrorMessage: String?,
     isComplete: Boolean,
     timestamp: Long
 ) {
@@ -169,11 +176,13 @@ private fun AssistantMetaRow(
 
     when (streamingStatus) {
         ChatStreamingStatus.FAILED -> {
-            Text(
-                text = "Streaming failed — try again.",
-                style = typography.messageMeta,
-                color = palette.systemMessageText
-            )
+            streamErrorMessage?.let { message ->
+                Text(
+                    text = message,
+                    style = typography.messageMeta,
+                    color = palette.reasoningText
+                )
+            }
         }
         ChatStreamingStatus.RUNNING -> if (!isComplete) {
             // Subtle subtitle while streaming — mirrors iOS `Text("Streaming…")`.

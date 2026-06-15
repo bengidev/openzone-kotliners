@@ -196,11 +196,11 @@ class SettingsComponentTest {
     }
 
     @Test
-    fun `reasoning level defaults to Off on empty stores`() = runTest {
+    fun `reasoning level defaults to High on empty stores`() = runTest {
         val scope = CoroutineScope(UnconfinedTestDispatcher(testScheduler))
         val component = component(scope = scope)
 
-        assertEquals(ComposerReasoningLevel.Off, component.state.value.reasoningLevel)
+        assertEquals(ComposerReasoningLevel.High, component.state.value.reasoningLevel)
     }
 
     @Test

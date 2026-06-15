@@ -97,7 +97,8 @@ class ChatComponent(
                     draft = "",
                     canSend = false,
                     status = ChatStreamingStatus.IDLE,
-                    isReasoningExpanded = false
+                    isReasoningExpanded = false,
+                    streamErrorMessage = null
                 )
             }
         }
@@ -127,30 +128,21 @@ class ChatComponent(
             content = draft,
             isComplete = true
         )
-        val thinkingMessage = ChatMessages.thinking(
-            id = newMessageId("thinking"),
-            content = "",
-            isComplete = false
-        )
-        val assistantMessage = ChatMessages.text(
-            id = newMessageId("assistant"),
-            role = ChatMessageRole.ASSISTANT,
-            content = "",
-            isComplete = false
-        )
 
         _state.update {
             it.copy(
                 draft = "",
                 canSend = false,
                 status = ChatStreamingStatus.RUNNING,
-                messages = it.messages + listOf(userMessage, thinkingMessage, assistantMessage)
+                currentPartialText = "",
+                currentPartialThinking = "",
+                streamErrorMessage = null,
+                streamingThinkingId = null,
+                streamingAnswerId = null,
+                messages = it.messages + userMessage
             )
         }
 
-        // Turn-boundary write #1: persist the user message immediately on send.
-        // An errored or killed turn therefore loses only in-flight assistant
-        // text, never the user's message.
         persist(snapshot.conversation, userMessage)
 
         val request = ChatRequest(
@@ -160,7 +152,7 @@ class ChatComponent(
             provider = provider,
             reasoningLevel = resolveReasoningLevel()
         )
-        beginStream(request, thinkingMessage.id, assistantMessage.id)
+        beginStream(request)
     }
 
     fun onStopTapped() {
@@ -169,7 +161,7 @@ class ChatComponent(
         _state.update { state ->
             state.copy(
                 status = ChatStreamingStatus.DONE,
-                messages = state.messages.markAssistantTurnsComplete()
+                messages = state.messages.markOpenAssistantTurnsComplete()
             )
         }
     }
@@ -197,65 +189,192 @@ class ChatComponent(
         _state.update { it.copy(isReasoningExpanded = !it.isReasoningExpanded) }
     }
 
-    // ---- Streaming -----------------------------------------------------
+    /** Re-issue the last request without appending another user message. */
+    fun onRetryTapped() {
+        val snapshot = _state.value
+        if (snapshot.isStreaming) return
+        val modelId = resolveModelId()
+        if (!canStartSend() || modelId.isNullOrBlank() || snapshot.messages.isEmpty()) return
 
-    private fun beginStream(
-        request: ChatRequest,
-        thinkingId: String,
-        assistantId: String
-    ) {
-        streamJob?.cancel()
-        streamJob = scope.launch {
-            try {
-                apiClient.stream(request).collect { event ->
-                    applyEvent(event, thinkingId, assistantId)
-                }
-            } catch (t: Throwable) {
-                val err = ChatStreamError(t.message ?: "Streaming failed")
-                applyEvent(ChatStreamingEvent.Error(err), thinkingId, assistantId)
+        _state.update {
+            it.copy(
+                canSend = false,
+                status = ChatStreamingStatus.RUNNING,
+                currentPartialText = "",
+                currentPartialThinking = "",
+                streamErrorMessage = null,
+                streamingThinkingId = null,
+                streamingAnswerId = null
+            )
+        }
+
+        val request = ChatRequest(
+            conversationId = snapshot.conversation.id,
+            messages = snapshot.messages,
+            modelId = modelId,
+            provider = resolveProvider(),
+            reasoningLevel = resolveReasoningLevel()
+        )
+        beginStream(request)
+    }
+
+    fun onErrorDismissed() {
+        _state.update { state ->
+            if (state.status != ChatStreamingStatus.FAILED) {
+                state
+            } else {
+                state.copy(
+                    streamErrorMessage = null,
+                    status = ChatStreamingStatus.IDLE
+                )
             }
         }
     }
 
-    private fun applyEvent(
-        event: ChatStreamingEvent,
-        thinkingId: String,
-        assistantId: String
-    ) {
+    // ---- Streaming -----------------------------------------------------
+
+    private fun beginStream(request: ChatRequest) {
+        streamJob?.cancel()
+        streamJob = scope.launch {
+            var sawTerminalEvent = false
+            try {
+                apiClient.stream(request).collect { event ->
+                    if (event is ChatStreamingEvent.Done || event is ChatStreamingEvent.Error) {
+                        sawTerminalEvent = true
+                    }
+                    applyEvent(event)
+                }
+                if (!sawTerminalEvent && _state.value.status == ChatStreamingStatus.RUNNING) {
+                    applyEvent(
+                        ChatStreamingEvent.Error(
+                            ChatStreamError("No response received from the model.")
+                        )
+                    )
+                }
+            } catch (t: Throwable) {
+                if (t is kotlinx.coroutines.CancellationException) throw t
+                applyEvent(ChatStreamingEvent.Error(ChatStreamError(t.message ?: "Streaming failed")))
+            }
+        }
+    }
+
+    private fun applyEvent(event: ChatStreamingEvent) {
         when (event) {
             is ChatStreamingEvent.TextDelta -> {
                 _state.update { state ->
+                    val partial = state.currentPartialText + event.delta
+                    val answerId = state.streamingAnswerId
+                    val messages =
+                            if (answerId != null) {
+                                state.messages.updateTextContent(answerId, partial, isComplete = false)
+                            } else {
+                                val newId = newMessageId("assistant")
+                                state.messages +
+                                        ChatMessages.text(
+                                                id = newId,
+                                                role = ChatMessageRole.ASSISTANT,
+                                                content = partial,
+                                                isComplete = false
+                                        )
+                            }
                     state.copy(
-                        messages = state.messages.appendTextDelta(assistantId, event.delta)
+                            currentPartialText = partial,
+                            streamingAnswerId = answerId ?: messages.lastAssistantId(),
+                            messages = messages
                     )
                 }
             }
             is ChatStreamingEvent.ThinkingDelta -> {
                 _state.update { state ->
+                    val partial = state.currentPartialThinking + event.delta
+                    if (partial.trim().isEmpty()) {
+                        return@update state.copy(currentPartialThinking = partial)
+                    }
+                    val thinkingId = state.streamingThinkingId
+                    val messages =
+                            if (thinkingId != null) {
+                                state.messages.updateThinkingContent(
+                                        thinkingId,
+                                        partial,
+                                        isComplete = false
+                                )
+                            } else {
+                                val newId = newMessageId("thinking")
+                                state.messages +
+                                        ChatMessages.thinking(
+                                                id = newId,
+                                                content = partial,
+                                                isComplete = false
+                                        )
+                            }
                     state.copy(
-                        messages = state.messages.appendThinkingDelta(thinkingId, event.delta)
+                            currentPartialThinking = partial,
+                            streamingThinkingId = thinkingId ?: messages.lastThinkingId(),
+                            messages = messages
                     )
                 }
             }
             ChatStreamingEvent.Done -> {
+                if (_state.value.status == ChatStreamingStatus.FAILED) {
+                    streamJob = null
+                    return
+                }
+                val snapshot = _state.value
+                val hasAnswer =
+                        snapshot.streamingAnswerId != null ||
+                                snapshot.currentPartialText.isNotBlank()
+                val hasThinking =
+                        snapshot.streamingThinkingId != null ||
+                                snapshot.currentPartialThinking.trim().isNotEmpty()
+                if (!hasAnswer && !hasThinking) {
+                    _state.update { state ->
+                        state.copy(
+                                status = ChatStreamingStatus.FAILED,
+                                streamErrorMessage = "No response received from the model.",
+                                currentPartialText = "",
+                                currentPartialThinking = "",
+                                streamingThinkingId = null,
+                                streamingAnswerId = null
+                        )
+                    }
+                    streamJob = null
+                    return
+                }
+                val assistantId = snapshot.streamingAnswerId
                 _state.update { state ->
+                    var messages = state.messages
+                    state.streamingThinkingId?.let { id ->
+                        messages = messages.markThinkingComplete(id)
+                    }
+                    state.streamingAnswerId?.let { id ->
+                        messages = messages.markTextComplete(id)
+                    }
                     state.copy(
-                        status = ChatStreamingStatus.DONE,
-                        messages = state.messages.markAssistantTurnsComplete()
+                            status = ChatStreamingStatus.DONE,
+                            currentPartialText = "",
+                            currentPartialThinking = "",
+                            streamingThinkingId = null,
+                            streamingAnswerId = null,
+                            messages = messages
                     )
                 }
-                // Turn-boundary write #2: persist the completed assistant text
-                // once, after the stream finishes. No per-delta writes.
-                persistCompletedAssistant(assistantId)
+                assistantId?.let(::persistCompletedAssistant)
                 streamJob = null
             }
             is ChatStreamingEvent.Error -> {
                 _state.update { state ->
                     state.copy(
-                        status = ChatStreamingStatus.FAILED,
-                        messages = state.messages
-                            .markAssistantTurnsComplete()
-                            .appendSystemError(event.error.message)
+                            status = ChatStreamingStatus.FAILED,
+                            streamErrorMessage = event.error.message,
+                            currentPartialText = "",
+                            currentPartialThinking = "",
+                            streamingThinkingId = null,
+                            streamingAnswerId = null,
+                            messages =
+                                    state.messages.dropInFlightStreamingRows(
+                                            answerId = state.streamingAnswerId,
+                                            thinkingId = state.streamingThinkingId
+                                    )
                     )
                 }
                 streamJob = null
@@ -293,49 +412,93 @@ class ChatComponent(
         persist(state.conversation, assistant)
     }
 
-    /** Appends `delta` to a text message matching `id` (user or assistant). */
-    private fun List<ChatMessage>.appendTextDelta(id: String, delta: String): List<ChatMessage> =
+    /** Sets absolute `content` on the text message matching `id`. */
+    private fun List<ChatMessage>.updateTextContent(
+        id: String,
+        content: String,
+        isComplete: Boolean
+    ): List<ChatMessage> =
         map { message ->
             if (message is ChatMessage.Text && message.id == id) {
-                ChatMessage.Text(message.message.copy(content = message.message.content + delta))
-            } else message
+                ChatMessage.Text(message.message.copy(content = content, isComplete = isComplete))
+            } else {
+                message
+            }
         }
 
-    /** Appends `delta` to the reasoning message matching `id`. */
-    private fun List<ChatMessage>.appendThinkingDelta(id: String, delta: String): List<ChatMessage> =
+    /** Sets absolute `content` on the reasoning message matching `id`. */
+    private fun List<ChatMessage>.updateThinkingContent(
+        id: String,
+        content: String,
+        isComplete: Boolean
+    ): List<ChatMessage> =
         map { message ->
             if (message is ChatMessage.Thinking && message.id == id) {
-                ChatMessage.Thinking(message.message.copy(content = message.message.content + delta))
-            } else message
+                ChatMessage.Thinking(message.message.copy(content = content, isComplete = isComplete))
+            } else {
+                message
+            }
         }
 
-    /** Marks the latest open thinking + assistant text turn as complete. */
-    private fun List<ChatMessage>.markAssistantTurnsComplete(): List<ChatMessage> {
-        val lastAssistantId = indexOfLast {
-            it is ChatMessage.Text && it.message.role == ChatMessageRole.ASSISTANT
-        }.takeIf { it != -1 }?.let { (this[it] as ChatMessage.Text).id }
-        val lastThinkingId = indexOfLast { it is ChatMessage.Thinking }
-            .takeIf { it != -1 }?.let { (this[it] as ChatMessage.Thinking).id }
+    private fun List<ChatMessage>.markTextComplete(id: String): List<ChatMessage> =
+        map { message ->
+            if (message is ChatMessage.Text && message.id == id) {
+                ChatMessage.Text(message.message.copy(isComplete = true))
+            } else {
+                message
+            }
+        }
 
+    private fun List<ChatMessage>.markThinkingComplete(id: String): List<ChatMessage> =
+        map { message ->
+            if (message is ChatMessage.Thinking && message.id == id) {
+                ChatMessage.Thinking(message.message.copy(isComplete = true))
+            } else {
+                message
+            }
+        }
+
+    private fun List<ChatMessage>.lastAssistantId(): String? =
+        lastOrNull { it is ChatMessage.Text && it.message.role == ChatMessageRole.ASSISTANT }
+            ?.let { (it as ChatMessage.Text).id }
+
+    private fun List<ChatMessage>.lastThinkingId(): String? =
+        lastOrNull { it is ChatMessage.Thinking }?.let { (it as ChatMessage.Thinking).id }
+
+    /** Removes incomplete assistant/thinking rows created for the in-flight turn. */
+    private fun List<ChatMessage>.dropInFlightStreamingRows(
+        answerId: String?,
+        thinkingId: String?
+    ): List<ChatMessage> =
+        filter { message ->
+            when (message) {
+                is ChatMessage.Text -> message.id != answerId
+                is ChatMessage.Thinking -> message.id != thinkingId
+                is ChatMessage.System -> true
+            }
+        }
+
+    /** Marks any in-flight assistant turn rows complete on stop/cancel. */
+    private fun List<ChatMessage>.markOpenAssistantTurnsComplete(): List<ChatMessage> {
+        val lastAssistantId = lastAssistantId()
+        val lastThinkingId = lastThinkingId()
         return map { message ->
             when (message) {
                 is ChatMessage.Text ->
                     if (message.id == lastAssistantId) {
                         ChatMessage.Text(message.message.copy(isComplete = true))
-                    } else message
+                    } else {
+                        message
+                    }
                 is ChatMessage.Thinking ->
                     if (message.id == lastThinkingId) {
                         ChatMessage.Thinking(message.message.copy(isComplete = true))
-                    } else message
+                    } else {
+                        message
+                    }
                 is ChatMessage.System -> message
             }
         }
     }
 
-    /** Appends a system message (used for error surfaces). */
-    private fun List<ChatMessage>.appendSystemError(message: String): List<ChatMessage> =
-        this + ChatMessages.system(
-            id = "system-${UUID.randomUUID()}",
-            content = message
-        )
 }

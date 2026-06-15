@@ -18,7 +18,10 @@ data class ChatTypography(
     val reasoningBody: TextStyle,
     val reasoningHeader: TextStyle,
     val messageMeta: TextStyle,
-    val systemMessage: TextStyle
+    val systemMessage: TextStyle,
+    val errorTitle: TextStyle,
+    val errorBody: TextStyle,
+    val errorAction: TextStyle
 )
 
 private val Sans = FontFamily.SansSerif
@@ -54,6 +57,24 @@ object ChatTypographyDefaults {
             fontFamily = Sans,
             fontWeight = FontWeight.Medium,
             fontSize = 12.sp,
+            lineHeight = 16.sp
+        ),
+        errorTitle = TextStyle(
+            fontFamily = Sans,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 14.sp,
+            lineHeight = 18.sp
+        ),
+        errorBody = TextStyle(
+            fontFamily = Sans,
+            fontWeight = FontWeight.Normal,
+            fontSize = 13.sp,
+            lineHeight = 18.sp
+        ),
+        errorAction = TextStyle(
+            fontFamily = Sans,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 13.sp,
             lineHeight = 16.sp
         )
     )

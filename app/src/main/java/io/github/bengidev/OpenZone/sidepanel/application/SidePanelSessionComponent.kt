@@ -7,6 +7,7 @@ import com.arkivanov.decompose.value.update
 import io.github.bengidev.openzone.chat.domain.ChatConversation
 import io.github.bengidev.openzone.chat.infrastructure.ChatHistoryStore
 import io.github.bengidev.openzone.sidepanel.domain.SidePanelSessionSection
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -25,7 +26,8 @@ class SidePanelSessionComponent(
         private val onDeleteConversation: (String) -> Unit = {},
         private val onSettingsTapped: () -> Unit = {},
         activeConversationId: String? = null,
-        mainScope: CoroutineScope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob())
+        mainScope: CoroutineScope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob()),
+        private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : ComponentContext by componentContext {
 
  data class State(
@@ -95,8 +97,12 @@ class SidePanelSessionComponent(
  }
 
  fun onPinConversation(conversation: ChatConversation) {
-  val current = _state.value.conversations.firstOrNull { it.id == conversation.id } ?: return
-  val newValue = !current.isPinned
+  val matching =
+          _state.value.conversations.indices.filter {
+           _state.value.conversations[it].id == conversation.id
+          }
+  if (matching.isEmpty()) return
+  val newValue = !_state.value.conversations[matching.first()].isPinned
   _state.update { state ->
    val updated =
            state.conversations.map { item ->
@@ -104,12 +110,17 @@ class SidePanelSessionComponent(
            }
    state.copy(conversations = SidePanelSessionSection.deduplicatedPinnedFirst(updated))
   }
-  scope.launch { withContext(Dispatchers.IO) { historyStore.setPinned(conversation.id, newValue) } }
+  scope.launch { withContext(ioDispatcher) { historyStore.setPinned(conversation.id, newValue) } }
  }
 
  fun onRenameConversation(conversationId: String, newTitle: String) {
   val trimmed = newTitle.trim()
   if (trimmed.isEmpty()) return
+  val matching =
+          _state.value.conversations.indices.filter {
+           _state.value.conversations[it].id == conversationId
+          }
+  if (matching.isEmpty()) return
   val now = System.currentTimeMillis()
   _state.update { state ->
    val updated =
@@ -118,15 +129,11 @@ class SidePanelSessionComponent(
                     if (item.id == conversationId) item.copy(title = trimmed, updatedAt = now)
                     else item
                    }
-                   .sortedWith(
-                           compareByDescending<ChatConversation> { it.isPinned }.thenByDescending {
-                            it.updatedAt
-                           }
-                   )
+                   .let { SidePanelSessionSection.sortedPinnedFirst(it) }
    state.copy(conversations = SidePanelSessionSection.deduplicatedPinnedFirst(updated))
   }
   scope.launch {
-   withContext(Dispatchers.IO) { historyStore.renameConversation(conversationId, trimmed) }
+   withContext(ioDispatcher) { historyStore.renameConversation(conversationId, trimmed) }
    onRenameConversation(conversationId, trimmed)
   }
  }
@@ -145,7 +152,7 @@ class SidePanelSessionComponent(
    )
   }
   scope.launch {
-   withContext(Dispatchers.IO) {
+   withContext(ioDispatcher) {
     historyStore.deleteConversation(conversation.id)
     val groups = historyStore.listGroups()
     _state.update { it.copy(availableGroups = groups) }
@@ -158,6 +165,11 @@ class SidePanelSessionComponent(
 
  fun onConversationGroupChanged(conversationId: String, groupName: String?) {
   val normalized = groupName?.trim()?.takeIf { it.isNotEmpty() }
+  val matching =
+          _state.value.conversations.indices.filter {
+           _state.value.conversations[it].id == conversationId
+          }
+  if (matching.isEmpty()) return
   if (normalized != null) {
    _state.update { it.copy(expandedGroups = it.expandedGroups + normalized) }
   }
@@ -167,15 +179,11 @@ class SidePanelSessionComponent(
                    .map { item ->
                     if (item.id == conversationId) item.copy(groupName = normalized) else item
                    }
-                   .sortedWith(
-                           compareByDescending<ChatConversation> { it.isPinned }.thenByDescending {
-                            it.updatedAt
-                           }
-                   )
+                   .let { SidePanelSessionSection.sortedPinnedFirst(it) }
    state.copy(conversations = SidePanelSessionSection.deduplicatedPinnedFirst(updated))
   }
   scope.launch {
-   withContext(Dispatchers.IO) {
+   withContext(ioDispatcher) {
     historyStore.setGroup(conversationId, normalized)
     val groups = historyStore.listGroups()
     _state.update { it.copy(availableGroups = groups) }
@@ -200,8 +208,8 @@ class SidePanelSessionComponent(
  }
 
  private suspend fun reloadConversations() {
-  val list = withContext(Dispatchers.IO) { historyStore.listConversations() }
-  val groups = withContext(Dispatchers.IO) { historyStore.listGroups() }
+  val list = withContext(ioDispatcher) { historyStore.listConversations() }
+  val groups = withContext(ioDispatcher) { historyStore.listGroups() }
   _state.update {
    it.copy(
            conversations = SidePanelSessionSection.deduplicatedPinnedFirst(list),

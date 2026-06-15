@@ -137,6 +137,41 @@ class OpenAiCompatibleStreamingClientTest {
         assertEquals(1, events.size)
         val err = events.single() as ChatStreamingEvent.Error
         assertTrue(err.error.message.contains("401"))
+        assertTrue(err.error.message.contains("API key"))
+    }
+
+    @Test
+    fun `maps http 403 with provider body to upgrade message`() = runTest {
+        server.enqueue(
+            MockResponse()
+                .setResponseCode(403)
+                .setBody(
+                    """{"error":{"message":"Your Go plan doesn't include API access. Upgrade to Provider or higher.","code":"upgrade_required"}}"""
+                )
+        )
+
+        val events = client().stream(request()).toList()
+        val err = events.single() as ChatStreamingEvent.Error
+        assertTrue(err.error.message.contains("403"))
+        assertTrue(err.error.message.contains("Go plan"))
+    }
+
+    @Test
+    fun `maps mid-stream error object to error event`() = runTest {
+        server.enqueue(
+            sse(
+                """
+                data: {"choices":[{"delta":{"content":"partial"}}]}
+                data: {"error":{"message":"upstream exploded"}}
+                """.trimIndent() + "\n"
+            )
+        )
+
+        val events = client().stream(request()).toList()
+
+        assertEquals("partial", texts(events))
+        val err = events.last() as ChatStreamingEvent.Error
+        assertTrue(err.error.message.contains("upstream exploded"))
     }
 
     @Test
@@ -185,5 +220,160 @@ class OpenAiCompatibleStreamingClientTest {
 
         val events = client().stream(request()).toList()
         assertEquals("safe", texts(events))
+    }
+
+    @Test
+    fun `maps reasoning_details deltas to thinking events`() = runTest {
+        server.enqueue(
+            sse(
+                """
+                data: {"choices":[{"delta":{"reasoning_details":[{"type":"reasoning.text","text":"Let me think"}]}}]}
+                data: {"choices":[{"delta":{"reasoning_details":[{"type":"reasoning.text","text":" step by step"}]}}]}
+                data: {"choices":[{"delta":{"content":"Hello!"}}]}
+                data: [DONE]
+                """.trimIndent() + "\n"
+            )
+        )
+
+        val events = client().stream(request()).toList()
+
+        assertEquals("Let me think step by step", thinking(events))
+        assertEquals("Hello!", texts(events))
+    }
+
+    @Test
+    fun `maps reasoning_details summary type to thinking events`() = runTest {
+        server.enqueue(
+            sse(
+                """
+                data: {"choices":[{"delta":{"reasoning_details":[{"type":"reasoning.summary","summary":"Planning reply"}]}}]}
+                data: {"choices":[{"delta":{"content":"Hi there"}}]}
+                data: [DONE]
+                """.trimIndent() + "\n"
+            )
+        )
+
+        val events = client().stream(request()).toList()
+
+        assertEquals("Planning reply", thinking(events))
+        assertEquals("Hi there", texts(events))
+    }
+
+    @Test
+    fun `maps message content fallback on final chunk`() = runTest {
+        server.enqueue(
+            sse(
+                """
+                data: {"choices":[{"message":{"role":"assistant","content":"Hello from message field"}}]}
+                data: [DONE]
+                """.trimIndent() + "\n"
+            )
+        )
+
+        val events = client().stream(request()).toList()
+        assertEquals("Hello from message field", texts(events))
+    }
+
+    @Test
+    fun `maps openrouter qwen3 reasoning_details stream to thinking and text`() = runTest {
+        server.enqueue(
+            sse(
+                """
+                data: {"id":"gen-1","choices":[{"index":0,"delta":{"reasoning_details":[{"type":"reasoning.text","text":"Thinking"}]},"finish_reason":null}]}
+                data: {"id":"gen-1","choices":[{"index":0,"delta":{"role":"assistant","content":"Hello!","reasoning":null,"reasoning_details":[]},"finish_reason":null}]}
+                data: [DONE]
+                """.trimIndent() + "\n"
+            )
+        )
+
+        val events = client().stream(request()).toList()
+
+        assertEquals("Thinking", thinking(events))
+        assertEquals("Hello!", texts(events))
+        assertTrue(events.last() is ChatStreamingEvent.Done)
+    }
+
+    @Test
+    fun `maps reasoning_text field to thinking events`() = runTest {
+        server.enqueue(
+            sse(
+                """
+                data: {"choices":[{"delta":{"reasoning_text":"hmm"}}]}
+                data: {"choices":[{"delta":{"content":"Answer"}}]}
+                data: [DONE]
+                """.trimIndent() + "\n"
+            )
+        )
+
+        val events = client().stream(request()).toList()
+        assertEquals("hmm", thinking(events))
+        assertEquals("Answer", texts(events))
+    }
+
+    @Test
+    fun `skips null delta chunks without aborting stream`() = runTest {
+        server.enqueue(
+            sse(
+                """
+                data: {"choices":[{"index":0,"delta":{"content":"Hi"}}]}
+                data: {"choices":[{"index":0,"delta":null,"finish_reason":"stop"}]}
+                data: [DONE]
+                """.trimIndent() + "\n"
+            )
+        )
+
+        val events = client().stream(request()).toList()
+        assertEquals("Hi", texts(events))
+    }
+
+    @Test
+    fun `maps ndjson lines without data prefix`() = runTest {
+        server.enqueue(
+            MockResponse()
+                .setHeader("Content-Type", "text/event-stream")
+                .setBody(
+                    """
+                    {"choices":[{"delta":{"content":"Hello"}}]}
+                    {"choices":[{"delta":{"content":"!"}}]}
+                    data: [DONE]
+                    """.trimIndent() + "\n"
+                )
+        )
+
+        val events = client().stream(request()).toList()
+        assertEquals("Hello!", texts(events))
+    }
+
+    @Test
+    fun `maps stream finish_reason error to error event`() = runTest {
+        server.enqueue(
+            sse(
+                """
+                data: {"choices":[{"finish_reason":"error","native_finish_reason":"Provider overloaded"}]}
+                """.trimIndent() + "\n"
+            )
+        )
+
+        val events = client().stream(request()).toList()
+        val err = events.last() as ChatStreamingEvent.Error
+        assertTrue(err.error.message.contains("Provider overloaded"))
+    }
+
+    @Test
+    fun `whitespace-only reasoning deltas are filtered out`() = runTest {
+        server.enqueue(
+            sse(
+                """
+                data: {"choices":[{"delta":{"reasoning":"   "}}]}
+                data: {"choices":[{"delta":{"content":"Answer"}}]}
+                data: [DONE]
+                """.trimIndent() + "\n"
+            )
+        )
+
+        val events = client().stream(request()).toList()
+
+        assertTrue(events.filterIsInstance<ChatStreamingEvent.ThinkingDelta>().isEmpty())
+        assertEquals("Answer", texts(events))
     }
 }

@@ -5,15 +5,15 @@ import io.github.bengidev.openzone.chat.domain.ChatMessageRole
 import io.github.bengidev.openzone.chat.domain.ChatRequest
 import io.github.bengidev.openzone.chat.domain.ChatStreamError
 import io.github.bengidev.openzone.chat.domain.ChatStreamingEvent
-import io.github.bengidev.openzone.chat.infrastructure.wire.ChatCompletionChunk
 import io.github.bengidev.openzone.chat.infrastructure.wire.ChatCompletionRequest
+import io.github.bengidev.openzone.chat.infrastructure.wire.OpenRouterStreamPayloadParser
 import io.github.bengidev.openzone.chat.infrastructure.wire.WireErrorEnvelope
 import io.github.bengidev.openzone.chat.infrastructure.wire.WireMessage
 import io.github.bengidev.openzone.chat.infrastructure.wire.WireReasoning
 import io.github.bengidev.openzone.shared.externals.networking.AuthScheme
 import io.github.bengidev.openzone.shared.externals.networking.ChatProvider
-import io.github.bengidev.openzone.shared.externals.security.CredentialStore
 import io.github.bengidev.openzone.shared.externals.networking.SseLineDecoder
+import io.github.bengidev.openzone.shared.externals.security.CredentialStore
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -40,10 +40,10 @@ import kotlin.coroutines.coroutineContext
  * Secrets are read from [credentialStore] at call time (never captured at
  * construction), so a key entered after the client is built is honored on the
  * next request. The target provider is read from each [ChatRequest.provider],
- * making a single instance provider-agnostic. Mirrors the iOS OpenAI-compatible
- * client.
+ * making a single instance provider-agnostic. Mirrors iOS
+ * `ChatOpenAICompatibleStreamingClient`.
  */
-class OpenAiCompatibleStreamingClient(
+class ChatOpenAICompatibleStreamingClient(
     private val credentialStore: CredentialStore,
     private val callFactory: Call.Factory = defaultStreamingClient,
     private val json: Json = defaultJson
@@ -52,7 +52,6 @@ class OpenAiCompatibleStreamingClient(
     override fun stream(request: ChatRequest): Flow<ChatStreamingEvent> = flow {
         val provider = request.provider
 
-        // Resolve credential at call time.
         val secret = credentialStore.secretFor(provider.id)
         if (provider.authScheme is AuthScheme.Bearer && secret.isNullOrBlank()) {
             emit(
@@ -91,20 +90,35 @@ class OpenAiCompatibleStreamingClient(
                 while (!source.exhausted()) {
                     coroutineContext.ensureActive()
                     val line = source.readUtf8Line() ?: break
-                    // Re-add newline so the decoder's line-buffering contract holds
-                    // even though okio already split on the newline for us.
+                    val trimmed = line.removePrefix("\uFEFF").trim()
+                    if (trimmed.isEmpty() || trimmed.startsWith(":")) continue
+
                     for (event in decoder.decode(line + "\n")) {
                         when (event) {
                             is SseLineDecoder.SseEvent.Data ->
-                                emitDelta(event.payload)
+                                if (emitDelta(event.payload)) return@use
                             SseLineDecoder.SseEvent.Done -> {
                                 emit(ChatStreamingEvent.Done)
                                 return@use
                             }
                         }
                     }
+
+                    // Some proxies / providers emit NDJSON lines without the SSE `data:` prefix.
+                    if (trimmed.startsWith("{") && !trimmed.startsWith("data:")) {
+                        if (emitDelta(trimmed)) return@use
+                    }
                 }
-                // Stream ended without an explicit [DONE]; treat as a clean finish.
+                for (event in decoder.flush()) {
+                    when (event) {
+                        is SseLineDecoder.SseEvent.Data ->
+                            if (emitDelta(event.payload)) return@use
+                        SseLineDecoder.SseEvent.Done -> {
+                            emit(ChatStreamingEvent.Done)
+                            return@use
+                        }
+                    }
+                }
                 emit(ChatStreamingEvent.Done)
             } catch (io: IOException) {
                 emit(ChatStreamingEvent.Error(ChatStreamError(io.message ?: "Stream read error.")))
@@ -112,26 +126,28 @@ class OpenAiCompatibleStreamingClient(
         }
     }
 
+    /** @return `true` when the stream should terminate after an error payload. */
     private suspend fun kotlinx.coroutines.flow.FlowCollector<ChatStreamingEvent>.emitDelta(
         payload: String
-    ) {
-        val chunk = runCatching { json.decodeFromString<ChatCompletionChunk>(payload) }.getOrNull()
-            ?: return
-        val delta = chunk.choices.firstOrNull()?.delta ?: return
+    ): Boolean {
+        val parsed = OpenRouterStreamPayloadParser.parse(payload, json)
 
-        delta.reasoningText?.takeIf { it.isNotEmpty() }?.let {
-            emit(ChatStreamingEvent.ThinkingDelta(it))
+        parsed.errorMessage?.let { message ->
+            emit(ChatStreamingEvent.Error(ChatStreamError(message)))
+            return true
         }
-        delta.content?.takeIf { it.isNotEmpty() }?.let {
-            emit(ChatStreamingEvent.TextDelta(it))
+
+        for (thinking in parsed.thinkingDeltas) {
+            emit(ChatStreamingEvent.ThinkingDelta(thinking))
         }
+        for (text in parsed.textDeltas) {
+            emit(ChatStreamingEvent.TextDelta(text))
+        }
+        return false
     }
 
     private fun buildRequest(request: ChatRequest, secret: String?): Request {
         val provider = request.provider
-        // Map the domain reasoning level to the wire `reasoning.effort` field.
-        // Off yields null effort, so `reasoning` stays null and is omitted from
-        // the serialized JSON entirely (explicitNulls = false).
         val reasoning = request.reasoningLevel.wireEffort?.let { WireReasoning(effort = it) }
         val payload = ChatCompletionRequest(
             model = request.modelId,
@@ -154,29 +170,32 @@ class OpenAiCompatibleStreamingClient(
     }
 
     private fun httpErrorMessage(code: Int, rawBody: String): String {
-        val parsed = runCatching {
-            json.decodeFromString<WireErrorEnvelope>(rawBody).error?.message
-        }.getOrNull()
-        val detail = parsed?.takeIf { it.isNotBlank() }
-        return when {
-            detail != null -> "HTTP $code: $detail"
-            code == 401 -> "HTTP 401: Unauthorized — check your API key."
-            else -> "HTTP $code: request failed."
+        val detail =
+                OpenRouterStreamPayloadParser.parse(rawBody, json).errorMessage
+                        ?: runCatching {
+                            json.decodeFromString<WireErrorEnvelope>(rawBody).error?.message
+                        }.getOrNull()
+        val message = detail?.takeIf { it.isNotBlank() }
+        return when (code) {
+            401 -> "Unauthorized (401). Check that your API key is valid."
+            403 ->
+                if (message != null) {
+                    "Forbidden (403): $message"
+                } else {
+                    "Forbidden (403). Your plan may not include API access. Upgrade your provider plan to use these endpoints."
+                }
+            else ->
+                if (message != null) {
+                    "Request failed ($code): $message"
+                } else {
+                    "Request failed with status $code."
+                }
         }
     }
 
     private companion object {
         val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
 
-        /**
-         * Default client tuned for long-lived SSE streaming. The read timeout is
-         * disabled because a reasoning model can stay silent (no SSE frame) for
-         * far longer than OkHttp's 10s default while it "thinks" before the first
-         * token — a non-zero read timeout surfaces as `SocketTimeoutException`
-         * ("timeout") and aborts the stream. The overall call timeout is likewise
-         * disabled so a long completion isn't cut off; connect/write keep finite
-         * bounds so a genuinely unreachable host still fails fast.
-         */
         val defaultStreamingClient: OkHttpClient = OkHttpClient.Builder()
             .connectTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
@@ -187,11 +206,18 @@ class OpenAiCompatibleStreamingClient(
         val defaultJson = Json {
             ignoreUnknownKeys = true
             explicitNulls = false
+            coerceInputValues = true
+            isLenient = true
         }
     }
 }
 
-/** Maps domain messages onto the OpenAI wire role/content shape. */
+@Deprecated(
+    message = "Renamed to ChatOpenAICompatibleStreamingClient for iOS parity.",
+    replaceWith = ReplaceWith("ChatOpenAICompatibleStreamingClient")
+)
+typealias OpenAiCompatibleStreamingClient = ChatOpenAICompatibleStreamingClient
+
 private fun List<ChatMessage>.toWireMessages(): List<WireMessage> =
     mapNotNull { message ->
         when (message) {
@@ -203,7 +229,6 @@ private fun List<ChatMessage>.toWireMessages(): List<WireMessage> =
                 role = "system",
                 content = message.message.content
             )
-            // Reasoning rows are local UI state, not part of the request context.
             is ChatMessage.Thinking -> null
         }
     }

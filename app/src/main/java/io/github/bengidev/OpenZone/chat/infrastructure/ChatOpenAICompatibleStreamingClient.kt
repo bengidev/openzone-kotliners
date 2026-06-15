@@ -5,8 +5,8 @@ import io.github.bengidev.openzone.chat.domain.ChatMessageRole
 import io.github.bengidev.openzone.chat.domain.ChatRequest
 import io.github.bengidev.openzone.chat.domain.ChatStreamError
 import io.github.bengidev.openzone.chat.domain.ChatStreamingEvent
-import io.github.bengidev.openzone.chat.infrastructure.wire.ChatCompletionChunk
 import io.github.bengidev.openzone.chat.infrastructure.wire.ChatCompletionRequest
+import io.github.bengidev.openzone.chat.infrastructure.wire.OpenRouterStreamPayloadParser
 import io.github.bengidev.openzone.chat.infrastructure.wire.WireErrorEnvelope
 import io.github.bengidev.openzone.chat.infrastructure.wire.WireMessage
 import io.github.bengidev.openzone.chat.infrastructure.wire.WireReasoning
@@ -90,14 +90,32 @@ class ChatOpenAICompatibleStreamingClient(
                 while (!source.exhausted()) {
                     coroutineContext.ensureActive()
                     val line = source.readUtf8Line() ?: break
+                    val trimmed = line.removePrefix("\uFEFF").trim()
+                    if (trimmed.isEmpty() || trimmed.startsWith(":")) continue
+
                     for (event in decoder.decode(line + "\n")) {
                         when (event) {
                             is SseLineDecoder.SseEvent.Data ->
-                                emitDelta(event.payload)
+                                if (emitDelta(event.payload)) return@use
                             SseLineDecoder.SseEvent.Done -> {
                                 emit(ChatStreamingEvent.Done)
                                 return@use
                             }
+                        }
+                    }
+
+                    // Some proxies / providers emit NDJSON lines without the SSE `data:` prefix.
+                    if (trimmed.startsWith("{") && !trimmed.startsWith("data:")) {
+                        if (emitDelta(trimmed)) return@use
+                    }
+                }
+                for (event in decoder.flush()) {
+                    when (event) {
+                        is SseLineDecoder.SseEvent.Data ->
+                            if (emitDelta(event.payload)) return@use
+                        SseLineDecoder.SseEvent.Done -> {
+                            emit(ChatStreamingEvent.Done)
+                            return@use
                         }
                     }
                 }
@@ -108,19 +126,24 @@ class ChatOpenAICompatibleStreamingClient(
         }
     }
 
+    /** @return `true` when the stream should terminate after an error payload. */
     private suspend fun kotlinx.coroutines.flow.FlowCollector<ChatStreamingEvent>.emitDelta(
         payload: String
-    ) {
-        val chunk = runCatching { json.decodeFromString<ChatCompletionChunk>(payload) }.getOrNull()
-            ?: return
-        val delta = chunk.choices.firstOrNull()?.delta ?: return
+    ): Boolean {
+        val parsed = OpenRouterStreamPayloadParser.parse(payload, json)
 
-        delta.reasoningText
-            ?.takeIf { it.trim().isNotEmpty() }
-            ?.let { emit(ChatStreamingEvent.ThinkingDelta(it)) }
-        delta.content?.takeIf { it.isNotEmpty() }?.let {
-            emit(ChatStreamingEvent.TextDelta(it))
+        parsed.errorMessage?.let { message ->
+            emit(ChatStreamingEvent.Error(ChatStreamError(message)))
+            return true
         }
+
+        for (thinking in parsed.thinkingDeltas) {
+            emit(ChatStreamingEvent.ThinkingDelta(thinking))
+        }
+        for (text in parsed.textDeltas) {
+            emit(ChatStreamingEvent.TextDelta(text))
+        }
+        return false
     }
 
     private fun buildRequest(request: ChatRequest, secret: String?): Request {
@@ -147,14 +170,26 @@ class ChatOpenAICompatibleStreamingClient(
     }
 
     private fun httpErrorMessage(code: Int, rawBody: String): String {
-        val parsed = runCatching {
-            json.decodeFromString<WireErrorEnvelope>(rawBody).error?.message
-        }.getOrNull()
-        val detail = parsed?.takeIf { it.isNotBlank() }
-        return when {
-            detail != null -> "HTTP $code: $detail"
-            code == 401 -> "HTTP 401: Unauthorized — check your API key."
-            else -> "HTTP $code: request failed."
+        val detail =
+                OpenRouterStreamPayloadParser.parse(rawBody, json).errorMessage
+                        ?: runCatching {
+                            json.decodeFromString<WireErrorEnvelope>(rawBody).error?.message
+                        }.getOrNull()
+        val message = detail?.takeIf { it.isNotBlank() }
+        return when (code) {
+            401 -> "Unauthorized (401). Check that your API key is valid."
+            403 ->
+                if (message != null) {
+                    "Forbidden (403): $message"
+                } else {
+                    "Forbidden (403). Your plan may not include API access. Upgrade your provider plan to use these endpoints."
+                }
+            else ->
+                if (message != null) {
+                    "Request failed ($code): $message"
+                } else {
+                    "Request failed with status $code."
+                }
         }
     }
 
@@ -171,6 +206,8 @@ class ChatOpenAICompatibleStreamingClient(
         val defaultJson = Json {
             ignoreUnknownKeys = true
             explicitNulls = false
+            coerceInputValues = true
+            isLenient = true
         }
     }
 }

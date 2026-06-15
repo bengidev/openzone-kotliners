@@ -97,7 +97,8 @@ class ChatComponent(
                     draft = "",
                     canSend = false,
                     status = ChatStreamingStatus.IDLE,
-                    isReasoningExpanded = false
+                    isReasoningExpanded = false,
+                    streamErrorMessage = null
                 )
             }
         }
@@ -135,6 +136,7 @@ class ChatComponent(
                 status = ChatStreamingStatus.RUNNING,
                 currentPartialText = "",
                 currentPartialThinking = "",
+                streamErrorMessage = null,
                 streamingThinkingId = null,
                 streamingAnswerId = null,
                 messages = it.messages + userMessage
@@ -187,18 +189,71 @@ class ChatComponent(
         _state.update { it.copy(isReasoningExpanded = !it.isReasoningExpanded) }
     }
 
+    /** Re-issue the last request without appending another user message. */
+    fun onRetryTapped() {
+        val snapshot = _state.value
+        if (snapshot.isStreaming) return
+        val modelId = resolveModelId()
+        if (!canStartSend() || modelId.isNullOrBlank() || snapshot.messages.isEmpty()) return
+
+        _state.update {
+            it.copy(
+                canSend = false,
+                status = ChatStreamingStatus.RUNNING,
+                currentPartialText = "",
+                currentPartialThinking = "",
+                streamErrorMessage = null,
+                streamingThinkingId = null,
+                streamingAnswerId = null
+            )
+        }
+
+        val request = ChatRequest(
+            conversationId = snapshot.conversation.id,
+            messages = snapshot.messages,
+            modelId = modelId,
+            provider = resolveProvider(),
+            reasoningLevel = resolveReasoningLevel()
+        )
+        beginStream(request)
+    }
+
+    fun onErrorDismissed() {
+        _state.update { state ->
+            if (state.status != ChatStreamingStatus.FAILED) {
+                state
+            } else {
+                state.copy(
+                    streamErrorMessage = null,
+                    status = ChatStreamingStatus.IDLE
+                )
+            }
+        }
+    }
+
     // ---- Streaming -----------------------------------------------------
 
     private fun beginStream(request: ChatRequest) {
         streamJob?.cancel()
         streamJob = scope.launch {
+            var sawTerminalEvent = false
             try {
                 apiClient.stream(request).collect { event ->
+                    if (event is ChatStreamingEvent.Done || event is ChatStreamingEvent.Error) {
+                        sawTerminalEvent = true
+                    }
                     applyEvent(event)
                 }
+                if (!sawTerminalEvent && _state.value.status == ChatStreamingStatus.RUNNING) {
+                    applyEvent(
+                        ChatStreamingEvent.Error(
+                            ChatStreamError("No response received from the model.")
+                        )
+                    )
+                }
             } catch (t: Throwable) {
-                val err = ChatStreamError(t.message ?: "Streaming failed")
-                applyEvent(ChatStreamingEvent.Error(err))
+                if (t is kotlinx.coroutines.CancellationException) throw t
+                applyEvent(ChatStreamingEvent.Error(ChatStreamError(t.message ?: "Streaming failed")))
             }
         }
     }
@@ -260,7 +315,32 @@ class ChatComponent(
                 }
             }
             ChatStreamingEvent.Done -> {
-                val assistantId = _state.value.streamingAnswerId
+                if (_state.value.status == ChatStreamingStatus.FAILED) {
+                    streamJob = null
+                    return
+                }
+                val snapshot = _state.value
+                val hasAnswer =
+                        snapshot.streamingAnswerId != null ||
+                                snapshot.currentPartialText.isNotBlank()
+                val hasThinking =
+                        snapshot.streamingThinkingId != null ||
+                                snapshot.currentPartialThinking.trim().isNotEmpty()
+                if (!hasAnswer && !hasThinking) {
+                    _state.update { state ->
+                        state.copy(
+                                status = ChatStreamingStatus.FAILED,
+                                streamErrorMessage = "No response received from the model.",
+                                currentPartialText = "",
+                                currentPartialThinking = "",
+                                streamingThinkingId = null,
+                                streamingAnswerId = null
+                        )
+                    }
+                    streamJob = null
+                    return
+                }
+                val assistantId = snapshot.streamingAnswerId
                 _state.update { state ->
                     var messages = state.messages
                     state.streamingThinkingId?.let { id ->
@@ -285,13 +365,12 @@ class ChatComponent(
                 _state.update { state ->
                     state.copy(
                             status = ChatStreamingStatus.FAILED,
+                            streamErrorMessage = event.error.message,
                             currentPartialText = "",
                             currentPartialThinking = "",
                             streamingThinkingId = null,
                             streamingAnswerId = null,
-                            messages = state.messages
-                                    .markOpenAssistantTurnsComplete()
-                                    .appendSystemError(event.error.message)
+                            messages = state.messages.markOpenAssistantTurnsComplete()
                     )
                 }
                 streamJob = null
@@ -405,10 +484,4 @@ class ChatComponent(
         }
     }
 
-    /** Appends a system message (used for error surfaces). */
-    private fun List<ChatMessage>.appendSystemError(message: String): List<ChatMessage> =
-        this + ChatMessages.system(
-            id = "system-${UUID.randomUUID()}",
-            content = message
-        )
 }

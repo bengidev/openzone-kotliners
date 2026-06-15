@@ -13,9 +13,8 @@ import io.github.bengidev.openzone.shared.externals.networking.ChatProvider
  * non-sensitive descriptor does.
  *
  * [reasoningLevel] controls whether a `reasoning.effort` parameter is included
- * in the wire request. [ComposerReasoningLevel.Off] (the default) means no
- * reasoning parameter is sent. Only non-null [ComposerReasoningLevel.wireEffort]
- * values reach the provider.
+ * in the wire request. [ComposerReasoningLevel.Off] means no reasoning parameter
+ * is sent. Only non-null [ComposerReasoningLevel.wireEffort] values reach the provider.
  *
  * Mirrors iOS `ChatRequest`.
  */
@@ -24,7 +23,7 @@ data class ChatRequest(
     val messages: List<ChatMessage>,
     val modelId: String,
     val provider: ChatProvider,
-    val reasoningLevel: ComposerReasoningLevel = ComposerReasoningLevel.Off
+    val reasoningLevel: ComposerReasoningLevel = ComposerReasoningLevel.High
 ) {
     val latestUserText: String
         get() = latestUserTextIn(messages)

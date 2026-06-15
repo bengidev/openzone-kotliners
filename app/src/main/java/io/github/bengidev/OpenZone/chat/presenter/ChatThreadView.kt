@@ -80,7 +80,8 @@ fun ChatThreadView(
                 ChatMessageRowView(
                     message = message,
                     isLastAssistantMessage = isLastAssistantMessage(message, messages),
-                    streamingStatus = state.status
+                    streamingStatus = state.status,
+                    streamErrorMessage = state.streamErrorMessage
                 )
             }
             if (showLoadingIndicator) {

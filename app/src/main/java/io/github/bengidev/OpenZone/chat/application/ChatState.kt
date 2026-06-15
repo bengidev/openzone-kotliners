@@ -23,10 +23,15 @@ data class ChatState(
     /** Stable id of the in-flight reasoning row, if one was created. */
     val streamingThinkingId: String? = null,
     /** Stable id of the in-flight assistant answer row, if one was created. */
-    val streamingAnswerId: String? = null
+    val streamingAnswerId: String? = null,
+    /** Human-readable stream failure surfaced by the composer error banner. */
+    val streamErrorMessage: String? = null
 ) {
     val isStreaming: Boolean
         get() = status == ChatStreamingStatus.RUNNING
+
+    val showChatErrorBanner: Boolean
+        get() = status == ChatStreamingStatus.FAILED && streamErrorMessage != null
 
     val hasMessages: Boolean
         get() = messages.isNotEmpty()

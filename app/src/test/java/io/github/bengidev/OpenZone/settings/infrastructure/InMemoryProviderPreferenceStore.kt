@@ -28,7 +28,7 @@ class InMemoryProviderPreferenceStore(
         _flow.value = ProviderPreference(
             providerId = providerId,
             modelId = current?.modelId,
-            reasoningLevel = current?.reasoningLevel ?: ComposerReasoningLevel.Off
+            reasoningLevel = current?.reasoningLevel ?: ComposerReasoningLevel.High
         )
     }
 
@@ -36,7 +36,7 @@ class InMemoryProviderPreferenceStore(
         _flow.value = ProviderPreference(
             providerId = providerId,
             modelId = modelId,
-            reasoningLevel = _flow.value?.reasoningLevel ?: ComposerReasoningLevel.Off
+            reasoningLevel = _flow.value?.reasoningLevel ?: ComposerReasoningLevel.High
         )
     }
 

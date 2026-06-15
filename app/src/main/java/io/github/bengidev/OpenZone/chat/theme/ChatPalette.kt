@@ -30,7 +30,10 @@ data class ChatPalette(
     val reasoningChevron: Color,
     val streamingDot: Color,
     val systemMessageText: Color,
-    val messageMetaText: Color
+    val messageMetaText: Color,
+    val danger: Color,
+    val surfaceRaised: Color,
+    val lineStrong: Color
 )
 
 val LocalChatPalette = staticCompositionLocalOf<ChatPalette> { ChatPaletteDefaults.light }
@@ -53,7 +56,10 @@ object ChatPaletteDefaults {
         reasoningChevron = p.textTertiary,
         streamingDot = p.accentPrimary,
         systemMessageText = p.warning,
-        messageMetaText = p.textTertiary
+        messageMetaText = p.textTertiary,
+        danger = p.danger,
+        surfaceRaised = p.surfaceRaised,
+        lineStrong = p.lineStrong
     )
 
     /** Static light default (pre-Compose fallback). */

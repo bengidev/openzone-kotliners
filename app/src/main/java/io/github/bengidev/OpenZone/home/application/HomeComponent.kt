@@ -63,7 +63,7 @@ class HomeComponent(
                          apiClient = resolvedApiClient,
                          scope = chatScope,
                          resolveProvider = { resolveProvider() },
-                         resolveModelId = { preference?.modelId },
+                         resolveModelId = { preference?.modelId ?: _state.value.selectedModelId },
                          resolveReasoningLevel = { resolveReasoningLevel() },
                          canStartSend = { isChatConfigured() },
                          historyStore = historyStore
@@ -90,6 +90,25 @@ class HomeComponent(
           ?.preferenceFlow
           ?.onEach { pref -> applyPreference(pref) }
           ?.launchIn(chatScope)
+
+  chatComponent.state
+          .onEach { chat ->
+           _state.update { home ->
+            if (home.isSending == chat.isStreaming &&
+                            home.streamErrorMessage == chat.streamErrorMessage &&
+                            home.chatStreamingStatus == chat.status
+            ) {
+             home
+            } else {
+             home.copy(
+                     isSending = chat.isStreaming,
+                     streamErrorMessage = chat.streamErrorMessage,
+                     chatStreamingStatus = chat.status
+             )
+            }
+           }
+          }
+          .launchIn(chatScope)
  }
 
  fun onAppear() {
@@ -113,7 +132,7 @@ class HomeComponent(
   shouldAutoSelectDefaultModel = pref?.modelId == null
   chatScope.launch {
    val models = resolveAvailableModels(providerId)
-   val reasoning = pref?.reasoningLevel ?: ExternalAIProviderReasoningModel.Off
+   val reasoning = pref?.reasoningLevel ?: ExternalAIProviderReasoningModel.High
    val hasKey = hasApiKey(providerId)
    _state.update {
     it.copy(
@@ -196,7 +215,8 @@ class HomeComponent(
    SidePanelComponent.Delegate.ReasoningModelChanged -> {
     chatScope.launch {
      val level =
-             preferenceStore?.preference()?.reasoningLevel ?: ExternalAIProviderReasoningModel.Off
+             preferenceStore?.preference()?.reasoningLevel
+                     ?: _state.value.reasoningLevel
      _state.update { it.copy(reasoningLevel = level) }
     }
    }
@@ -259,7 +279,7 @@ class HomeComponent(
  }
 
  private fun resolveReasoningLevel(): ExternalAIProviderReasoningModel =
-         preference?.reasoningLevel ?: ExternalAIProviderReasoningModel.Off
+         _state.value.reasoningLevel
 
  private fun isChatConfigured(): Boolean {
   val modelId = preference?.modelId ?: _state.value.selectedModelId
@@ -309,6 +329,8 @@ class HomeComponent(
  }
 
  fun onStopTapped() = chatComponent.onStopTapped()
+ fun onRetryTapped() = chatComponent.onRetryTapped()
+ fun onErrorDismissed() = chatComponent.onErrorDismissed()
  fun onClearThread() = chatComponent.onClearThread()
 
  fun onModelPopupOpen() {

@@ -1,5 +1,6 @@
 package io.github.bengidev.openzone.home.application
 
+import io.github.bengidev.openzone.chat.domain.ChatStreamingStatus
 import io.github.bengidev.openzone.shared.externals.networking.ChatModel
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -66,5 +67,22 @@ class HomeStateTest {
                 selectedModelId = "meta-llama/llama-3.3-70b-instruct:free"
             )
         assertTrue(configured.showComposerContextUsage)
+    }
+
+    @Test
+    fun `error banner shows only when stream failed with message`() {
+        val hidden =
+            HomeState(
+                chatStreamingStatus = ChatStreamingStatus.RUNNING,
+                streamErrorMessage = "boom"
+            )
+        assertFalse(hidden.showChatErrorBanner)
+
+        val visible =
+            HomeState(
+                chatStreamingStatus = ChatStreamingStatus.FAILED,
+                streamErrorMessage = "Forbidden (403): upgrade required"
+            )
+        assertTrue(visible.showChatErrorBanner)
     }
 }

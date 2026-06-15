@@ -370,7 +370,11 @@ class ChatComponent(
                             currentPartialThinking = "",
                             streamingThinkingId = null,
                             streamingAnswerId = null,
-                            messages = state.messages.markOpenAssistantTurnsComplete()
+                            messages =
+                                    state.messages.dropInFlightStreamingRows(
+                                            answerId = state.streamingAnswerId,
+                                            thinkingId = state.streamingThinkingId
+                                    )
                     )
                 }
                 streamJob = null
@@ -461,7 +465,20 @@ class ChatComponent(
     private fun List<ChatMessage>.lastThinkingId(): String? =
         lastOrNull { it is ChatMessage.Thinking }?.let { (it as ChatMessage.Thinking).id }
 
-    /** Marks any in-flight assistant turn rows complete on failure/cancel. */
+    /** Removes incomplete assistant/thinking rows created for the in-flight turn. */
+    private fun List<ChatMessage>.dropInFlightStreamingRows(
+        answerId: String?,
+        thinkingId: String?
+    ): List<ChatMessage> =
+        filter { message ->
+            when (message) {
+                is ChatMessage.Text -> message.id != answerId
+                is ChatMessage.Thinking -> message.id != thinkingId
+                is ChatMessage.System -> true
+            }
+        }
+
+    /** Marks any in-flight assistant turn rows complete on stop/cancel. */
     private fun List<ChatMessage>.markOpenAssistantTurnsComplete(): List<ChatMessage> {
         val lastAssistantId = lastAssistantId()
         val lastThinkingId = lastThinkingId()

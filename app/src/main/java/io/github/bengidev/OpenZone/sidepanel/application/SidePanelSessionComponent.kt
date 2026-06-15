@@ -7,6 +7,7 @@ import com.arkivanov.decompose.value.update
 import io.github.bengidev.openzone.chat.domain.ChatConversation
 import io.github.bengidev.openzone.chat.infrastructure.ChatHistoryStore
 import io.github.bengidev.openzone.sidepanel.domain.SidePanelSessionSection
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -25,7 +26,8 @@ class SidePanelSessionComponent(
         private val onDeleteConversation: (String) -> Unit = {},
         private val onSettingsTapped: () -> Unit = {},
         activeConversationId: String? = null,
-        mainScope: CoroutineScope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob())
+        mainScope: CoroutineScope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob()),
+        private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : ComponentContext by componentContext {
 
  data class State(
@@ -108,7 +110,7 @@ class SidePanelSessionComponent(
            }
    state.copy(conversations = SidePanelSessionSection.deduplicatedPinnedFirst(updated))
   }
-  scope.launch { withContext(Dispatchers.IO) { historyStore.setPinned(conversation.id, newValue) } }
+  scope.launch { withContext(ioDispatcher) { historyStore.setPinned(conversation.id, newValue) } }
  }
 
  fun onRenameConversation(conversationId: String, newTitle: String) {
@@ -131,7 +133,7 @@ class SidePanelSessionComponent(
    state.copy(conversations = SidePanelSessionSection.deduplicatedPinnedFirst(updated))
   }
   scope.launch {
-   withContext(Dispatchers.IO) { historyStore.renameConversation(conversationId, trimmed) }
+   withContext(ioDispatcher) { historyStore.renameConversation(conversationId, trimmed) }
    onRenameConversation(conversationId, trimmed)
   }
  }
@@ -150,7 +152,7 @@ class SidePanelSessionComponent(
    )
   }
   scope.launch {
-   withContext(Dispatchers.IO) {
+   withContext(ioDispatcher) {
     historyStore.deleteConversation(conversation.id)
     val groups = historyStore.listGroups()
     _state.update { it.copy(availableGroups = groups) }
@@ -181,7 +183,7 @@ class SidePanelSessionComponent(
    state.copy(conversations = SidePanelSessionSection.deduplicatedPinnedFirst(updated))
   }
   scope.launch {
-   withContext(Dispatchers.IO) {
+   withContext(ioDispatcher) {
     historyStore.setGroup(conversationId, normalized)
     val groups = historyStore.listGroups()
     _state.update { it.copy(availableGroups = groups) }
@@ -206,8 +208,8 @@ class SidePanelSessionComponent(
  }
 
  private suspend fun reloadConversations() {
-  val list = withContext(Dispatchers.IO) { historyStore.listConversations() }
-  val groups = withContext(Dispatchers.IO) { historyStore.listGroups() }
+  val list = withContext(ioDispatcher) { historyStore.listConversations() }
+  val groups = withContext(ioDispatcher) { historyStore.listGroups() }
   _state.update {
    it.copy(
            conversations = SidePanelSessionSection.deduplicatedPinnedFirst(list),

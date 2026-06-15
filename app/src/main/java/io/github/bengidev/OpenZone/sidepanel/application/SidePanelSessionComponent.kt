@@ -95,8 +95,12 @@ class SidePanelSessionComponent(
  }
 
  fun onPinConversation(conversation: ChatConversation) {
-  val current = _state.value.conversations.firstOrNull { it.id == conversation.id } ?: return
-  val newValue = !current.isPinned
+  val matching =
+          _state.value.conversations.indices.filter {
+           _state.value.conversations[it].id == conversation.id
+          }
+  if (matching.isEmpty()) return
+  val newValue = !_state.value.conversations[matching.first()].isPinned
   _state.update { state ->
    val updated =
            state.conversations.map { item ->
@@ -110,6 +114,11 @@ class SidePanelSessionComponent(
  fun onRenameConversation(conversationId: String, newTitle: String) {
   val trimmed = newTitle.trim()
   if (trimmed.isEmpty()) return
+  val matching =
+          _state.value.conversations.indices.filter {
+           _state.value.conversations[it].id == conversationId
+          }
+  if (matching.isEmpty()) return
   val now = System.currentTimeMillis()
   _state.update { state ->
    val updated =
@@ -118,11 +127,7 @@ class SidePanelSessionComponent(
                     if (item.id == conversationId) item.copy(title = trimmed, updatedAt = now)
                     else item
                    }
-                   .sortedWith(
-                           compareByDescending<ChatConversation> { it.isPinned }.thenByDescending {
-                            it.updatedAt
-                           }
-                   )
+                   .let { SidePanelSessionSection.sortedPinnedFirst(it) }
    state.copy(conversations = SidePanelSessionSection.deduplicatedPinnedFirst(updated))
   }
   scope.launch {
@@ -158,6 +163,11 @@ class SidePanelSessionComponent(
 
  fun onConversationGroupChanged(conversationId: String, groupName: String?) {
   val normalized = groupName?.trim()?.takeIf { it.isNotEmpty() }
+  val matching =
+          _state.value.conversations.indices.filter {
+           _state.value.conversations[it].id == conversationId
+          }
+  if (matching.isEmpty()) return
   if (normalized != null) {
    _state.update { it.copy(expandedGroups = it.expandedGroups + normalized) }
   }
@@ -167,11 +177,7 @@ class SidePanelSessionComponent(
                    .map { item ->
                     if (item.id == conversationId) item.copy(groupName = normalized) else item
                    }
-                   .sortedWith(
-                           compareByDescending<ChatConversation> { it.isPinned }.thenByDescending {
-                            it.updatedAt
-                           }
-                   )
+                   .let { SidePanelSessionSection.sortedPinnedFirst(it) }
    state.copy(conversations = SidePanelSessionSection.deduplicatedPinnedFirst(updated))
   }
   scope.launch {

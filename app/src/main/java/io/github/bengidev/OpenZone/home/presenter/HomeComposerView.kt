@@ -80,7 +80,7 @@ fun HomeComposerView(
     onModelPopupOpen: () -> Unit,
     onModelPopupDismiss: () -> Unit,
     onModelSearchQueryChanged: (String) -> Unit,
-    onModelFilterFreeOnlyToggled: () -> Unit,
+    onModelFilterFreeOnlyChanged: (Boolean) -> Unit,
     onModelSelected: (String) -> Unit,
     onReasoningLevelSelected: (ComposerReasoningLevel) -> Unit,
     onSpeedModeSelected: (ComposerSpeedMode) -> Unit,
@@ -111,7 +111,7 @@ fun HomeComposerView(
             onModelPopupOpen = onModelPopupOpen,
             onModelPopupDismiss = onModelPopupDismiss,
             onModelSearchQueryChanged = onModelSearchQueryChanged,
-            onModelFilterFreeOnlyToggled = onModelFilterFreeOnlyToggled,
+            onModelFilterFreeOnlyChanged = onModelFilterFreeOnlyChanged,
             onModelSelected = onModelSelected,
             onReasoningLevelSelected = onReasoningLevelSelected,
             onSpeedModeSelected = onSpeedModeSelected,
@@ -311,7 +311,7 @@ private fun ComposerContextRail(
     onModelPopupOpen: () -> Unit,
     onModelPopupDismiss: () -> Unit,
     onModelSearchQueryChanged: (String) -> Unit,
-    onModelFilterFreeOnlyToggled: () -> Unit,
+    onModelFilterFreeOnlyChanged: (Boolean) -> Unit,
     onModelSelected: (String) -> Unit,
     onReasoningLevelSelected: (ComposerReasoningLevel) -> Unit,
     onSpeedModeSelected: (ComposerSpeedMode) -> Unit,
@@ -338,17 +338,29 @@ private fun ComposerContextRail(
         ) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.weight(1f, fill = false)
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(end = 8.dp)
             ) {
-                // Model chip — opens the dynamic catalog popup
                 ComposerModelChip(
                     selectedModelTitle = state.selectedModelTitle,
+                    constrainTitle = state.selectedModelSupportsReasoning,
                     onClick = {
                         clearFocus()
                         onModelPopupOpen()
-                    }
+                    },
+                    modifier =
+                        Modifier
+                            .widthIn(min = 92.dp)
+                            .then(
+                                if (state.selectedModelSupportsReasoning) {
+                                    Modifier.weight(1f, fill = false)
+                                } else {
+                                    Modifier
+                                }
+                            )
                 )
-                // Reasoning chip — only shown when the selected model supports reasoning.
                 if (state.selectedModelSupportsReasoning) {
                     ComposerReasoningChip(
                         selectedLevel = state.reasoningLevel,
@@ -357,30 +369,30 @@ private fun ComposerContextRail(
                 }
             }
 
-            Spacer(modifier = Modifier.weight(1f))
-
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                // SpeedMode is a cosmetic composer affordance only — not sent to the provider.
-                // Show speed chip whenever a model is selected.
-                val showSpeedChip = state.selectedModel != null
-                if (showSpeedChip) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (state.hasApiKey && state.selectedModel != null) {
                     ComposerSpeedChip(
                         speedMode = state.speedMode,
                         availableModes = ComposerSpeedMode.entries,
                         onSpeedModeSelected = onSpeedModeSelected
                     )
                 }
-                ComposerContextUsageButton(
-                    usage = state.contextUsage,
-                    onClick = {
-                        clearFocus()
-                        onContextUsageTapped()
-                    }
-                )
+                if (state.showComposerContextUsage) {
+                    ComposerContextUsageButton(
+                        usage = state.contextUsage,
+                        onClick = {
+                            clearFocus()
+                            onContextUsageTapped()
+                        }
+                    )
+                }
             }
         }
 
-        if (state.isContextUsagePresented) {
+        if (state.isContextUsagePresented && state.showComposerContextUsage) {
             Popup(
                 alignment = Alignment.BottomEnd,
                 offset = popoverOffset,
@@ -397,7 +409,7 @@ private fun ComposerContextRail(
             ComposerModelPopup(
                 state = state,
                 onSearchQueryChanged = onModelSearchQueryChanged,
-                onFilterFreeOnlyToggled = onModelFilterFreeOnlyToggled,
+                onFilterFreeOnlyChanged = onModelFilterFreeOnlyChanged,
                 onModelSelected = onModelSelected,
                 onDismiss = onModelPopupDismiss
             )
@@ -408,19 +420,65 @@ private fun ComposerContextRail(
 @Composable
 private fun ComposerModelChip(
     selectedModelTitle: String,
-    onClick: () -> Unit
+    constrainTitle: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    ComposerMenuChip(
-        title = selectedModelTitle,
-        leadingIcon = {
-            Icon(
-                imageVector = Icons.Default.AutoAwesome,
-                contentDescription = null,
-                modifier = Modifier.size(14.dp)
+    val palette = HomeTheme.palette
+    val shape = RoundedCornerShape(16.dp)
+    val glassFill = if (palette.isDark) {
+        palette.elevatedSurface.copy(alpha = 0.7f)
+    } else {
+        palette.surface.copy(alpha = 0.72f)
+    }
+    val glassBorder = palette.border.copy(alpha = if (palette.isDark) 0.35f else 0.55f)
+
+    Row(
+        modifier = modifier
+            .widthIn(min = 92.dp)
+            .defaultMinSize(minHeight = 30.dp)
+            .shadow(
+                elevation = 6.dp,
+                shape = shape,
+                clip = false,
+                ambientColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.06f),
+                spotColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.06f)
             )
-        },
-        onClick = onClick
-    )
+            .clip(shape)
+            .background(glassFill)
+            .border(width = 1.dp, color = glassBorder, shape = shape)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 10.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(5.dp)
+    ) {
+        Icon(
+            imageVector = Icons.Default.AutoAwesome,
+            contentDescription = null,
+            modifier = Modifier.size(14.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = selectedModelTitle,
+            style = HomeTheme.typography.chipLabel,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            softWrap = false,
+            modifier =
+                if (constrainTitle) {
+                    Modifier.weight(1f).widthIn(min = 0.dp)
+                } else {
+                    Modifier
+                }
+        )
+        Icon(
+            imageVector = Icons.Default.KeyboardArrowDown,
+            contentDescription = null,
+            modifier = Modifier.size(16.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
 }
 
 @Composable
@@ -440,7 +498,8 @@ private fun ComposerReasoningChip(
                     modifier = Modifier.size(14.dp)
                 )
             },
-            onClick = { expanded = true }
+            onClick = { expanded = true },
+            modifier = Modifier.widthIn(min = 92.dp)
         )
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             ComposerReasoningLevel.entries.forEach { level ->
@@ -499,7 +558,8 @@ private fun ComposerSpeedChip(
 private fun ComposerMenuChip(
     title: String,
     onClick: () -> Unit,
-    leadingIcon: @Composable () -> Unit
+    leadingIcon: @Composable () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     AssistChip(
         onClick = onClick,
@@ -519,7 +579,7 @@ private fun ComposerMenuChip(
                 modifier = Modifier.size(16.dp)
             )
         },
-        modifier = Modifier.widthIn(min = 92.dp),
+        modifier = modifier.widthIn(min = 92.dp),
         colors = AssistChipDefaults.assistChipColors(
             containerColor = MaterialTheme.colorScheme.surface,
             labelColor = MaterialTheme.colorScheme.onSurfaceVariant,

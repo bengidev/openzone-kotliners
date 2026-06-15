@@ -38,12 +38,14 @@ fun ChatThreadView(
     val thinkingContentLength = (messages.lastOrNull { it is ChatMessage.Thinking } as? ChatMessage.Thinking)
         ?.message?.content?.length ?: 0
     val status = state.status
+    val showLoadingIndicator = state.showLoadingIndicator
 
     // Auto-scroll on new message id (animated).
-    LaunchedEffect(lastMessageId) {
-        if (lastMessageId != null) {
-            listState.animateScrollToItem(messages.lastIndex)
-        }
+    LaunchedEffect(lastMessageId, showLoadingIndicator) {
+        val targetIndex =
+                if (showLoadingIndicator) messages.size
+                else messages.lastIndex.takeIf { lastMessageId != null } ?: return@LaunchedEffect
+        listState.animateScrollToItem(targetIndex)
     }
     // Auto-scroll on streaming text growth (no animation, every chunk).
     LaunchedEffect(assistantContentLength, thinkingContentLength) {
@@ -80,6 +82,11 @@ fun ChatThreadView(
                     isLastAssistantMessage = isLastAssistantMessage(message, messages),
                     streamingStatus = state.status
                 )
+            }
+            if (showLoadingIndicator) {
+                item(key = "loading-indicator") {
+                    ChatLoadingIndicatorView()
+                }
             }
         }
     }

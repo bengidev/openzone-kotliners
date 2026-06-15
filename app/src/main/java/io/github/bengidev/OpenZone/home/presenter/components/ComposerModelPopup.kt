@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
+import io.github.bengidev.openzone.chat.infrastructure.ChatProviders
 import io.github.bengidev.openzone.home.application.HomeState
 import io.github.bengidev.openzone.home.theme.HomeTheme
 import io.github.bengidev.openzone.shared.externals.networking.formatContextLength
@@ -58,7 +59,7 @@ import io.github.bengidev.openzone.shared.externals.networking.ChatModel
 fun ComposerModelPopup(
     state: HomeState,
     onSearchQueryChanged: (String) -> Unit,
-    onFilterFreeOnlyToggled: () -> Unit,
+    onFilterFreeOnlyChanged: (Boolean) -> Unit,
     onModelSelected: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -69,7 +70,7 @@ fun ComposerModelPopup(
         ComposerModelPopupContent(
             state = state,
             onSearchQueryChanged = onSearchQueryChanged,
-            onFilterFreeOnlyToggled = onFilterFreeOnlyToggled,
+            onFilterFreeOnlyChanged = onFilterFreeOnlyChanged,
             onModelSelected = onModelSelected
         )
     }
@@ -79,7 +80,7 @@ fun ComposerModelPopup(
 private fun ComposerModelPopupContent(
     state: HomeState,
     onSearchQueryChanged: (String) -> Unit,
-    onFilterFreeOnlyToggled: () -> Unit,
+    onFilterFreeOnlyChanged: (Boolean) -> Unit,
     onModelSelected: (String) -> Unit
 ) {
     val palette = HomeTheme.palette
@@ -141,43 +142,49 @@ private fun ComposerModelPopupContent(
 
         Spacer(Modifier.height(10.dp))
 
-        // Free-tier filter toggle
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                text = "Free models only",
-                color = palette.textSecondary,
-                fontSize = 13.sp
-            )
-            Switch(
-                checked = state.modelFilterFreeOnly,
-                onCheckedChange = { onFilterFreeOnlyToggled() },
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = palette.primaryActionText,
-                    checkedTrackColor = palette.accent,
-                    uncheckedThumbColor = palette.textMuted,
-                    uncheckedTrackColor = palette.border
-                )
-            )
-        }
-
-        Spacer(Modifier.height(8.dp))
-
-        val filtered = state.filteredModels
-        if (filtered.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxWidth().height(80.dp),
-                contentAlignment = Alignment.Center
+        if (state.selectedProviderId == ChatProviders.openRouter.id && state.hasApiKey && state.availableModels.isNotEmpty()) {
+            Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "No models match.",
-                    color = palette.textMuted,
-                    fontSize = 13.sp
+                        text = "Free models only",
+                        color = palette.textSecondary,
+                        fontSize = 13.sp
+                )
+                Switch(
+                        checked = state.modelFilterFreeOnly,
+                        onCheckedChange = onFilterFreeOnlyChanged,
+                        colors =
+                                SwitchDefaults.colors(
+                                        checkedThumbColor = palette.primaryActionText,
+                                        checkedTrackColor = palette.accent,
+                                        uncheckedThumbColor = palette.textMuted,
+                                        uncheckedTrackColor = palette.border
+                                )
                 )
             }
+
+            Spacer(Modifier.height(8.dp))
+        }
+
+        val filtered = state.filteredModels
+        if (state.availableModels.isEmpty()) {
+            ModelPickerEmptyState(
+                title = if (state.hasApiKey) "No models" else "No models",
+                subtitle =
+                        if (state.hasApiKey) {
+                            "Could not load the model catalog. Check your API key and try again."
+                        } else {
+                            "Add an API key in Settings to load models from your provider."
+                        }
+            )
+        } else if (filtered.isEmpty()) {
+            ModelPickerEmptyState(
+                title = "No models found",
+                subtitle = "Try a different search term or remove the free-only filter."
+            )
         } else {
             LazyColumn(modifier = Modifier.heightIn(max = 320.dp)) {
                 items(filtered, key = { it.id }) { model ->
@@ -190,6 +197,30 @@ private fun ComposerModelPopupContent(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ModelPickerEmptyState(title: String, subtitle: String) {
+    val palette = HomeTheme.palette
+    Column(
+        modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp).padding(vertical = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            text = title,
+            color = palette.textPrimary,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.SemiBold
+        )
+        Text(
+            text = subtitle,
+            color = palette.textSecondary,
+            fontSize = 13.sp,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 8.dp)
+        )
     }
 }
 

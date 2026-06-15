@@ -91,13 +91,15 @@ data class SidePanelSessionSection(
    }
   }
 
+  fun sortedPinnedFirst(conversations: List<ChatConversation>): List<ChatConversation> =
+          conversations.sortedWith(
+                  compareByDescending<ChatConversation> { it.isPinned }.thenByDescending {
+                   it.updatedAt
+                  }
+          )
+
   fun deduplicatedPinnedFirst(conversations: List<ChatConversation>): List<ChatConversation> {
-   val sorted =
-           conversations.sortedWith(
-                   compareByDescending<ChatConversation> { it.isPinned }.thenByDescending {
-                    it.updatedAt
-                   }
-           )
+   val sorted = sortedPinnedFirst(conversations)
    val seen = mutableSetOf<String>()
    return sorted.filter { seen.add(it.id) }
   }

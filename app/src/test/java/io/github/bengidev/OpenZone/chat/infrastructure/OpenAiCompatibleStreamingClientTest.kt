@@ -186,4 +186,22 @@ class OpenAiCompatibleStreamingClientTest {
         val events = client().stream(request()).toList()
         assertEquals("safe", texts(events))
     }
+
+    @Test
+    fun `whitespace-only reasoning deltas are filtered out`() = runTest {
+        server.enqueue(
+            sse(
+                """
+                data: {"choices":[{"delta":{"reasoning":"   "}}]}
+                data: {"choices":[{"delta":{"content":"Answer"}}]}
+                data: [DONE]
+                """.trimIndent() + "\n"
+            )
+        )
+
+        val events = client().stream(request()).toList()
+
+        assertTrue(events.filterIsInstance<ChatStreamingEvent.ThinkingDelta>().isEmpty())
+        assertEquals("Answer", texts(events))
+    }
 }

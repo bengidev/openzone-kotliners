@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -33,6 +34,8 @@ import io.github.bengidev.openzone.sidepanel.presenter.SidePanelSettingScreen
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(component: HomeComponent, darkTheme: Boolean, modifier: Modifier = Modifier) {
+    LaunchedEffect(component) { component.onAppear() }
+
     val state by component.state.subscribeAsState()
     val chatState by component.chatComponent.state.collectAsState()
     val sidePanel = component.sidePanelComponent
@@ -82,8 +85,8 @@ fun HomeScreen(component: HomeComponent, darkTheme: Boolean, modifier: Modifier 
                                         onModelPopupDismiss = component::onModelPopupDismiss,
                                         onModelSearchQueryChanged =
                                                 component::onModelSearchQueryChanged,
-                                        onModelFilterFreeOnlyToggled =
-                                                component::onModelFilterFreeOnlyToggled,
+                                        onModelFilterFreeOnlyChanged =
+                                                component::onModelFilterFreeOnlyChanged,
                                         onModelSelected = component::onModelSelected,
                                         onReasoningLevelSelected =
                                                 component::onReasoningLevelSelected,
@@ -116,8 +119,6 @@ fun HomeScreen(component: HomeComponent, darkTheme: Boolean, modifier: Modifier 
                             )
                         } else {
                             HomeWelcomeView(
-                                    isChatConfigured = state.isChatConfigured,
-                                    onConfigureTapped = component::onSettingsTapped,
                                     modifier =
                                             Modifier.fillMaxWidth()
                                                     .fillMaxHeight()

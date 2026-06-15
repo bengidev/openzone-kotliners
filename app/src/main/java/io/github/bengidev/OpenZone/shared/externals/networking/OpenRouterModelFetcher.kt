@@ -18,13 +18,14 @@ import okhttp3.Request
  */
 class OpenRouterModelFetcher(
     private val httpClient: OkHttpClient = OkHttpClient(),
-    private val json: Json = defaultJson
+    private val json: Json = defaultJson,
+    private val modelsUrl: String = MODELS_URL
 ) : ModelCatalogFetcher {
 
     override fun fetchSync(providerId: String): List<ChatModel>? {
         if (providerId != PROVIDER_ID) return null
         val request = Request.Builder()
-            .url(MODELS_URL)
+            .url(modelsUrl)
             .header("Accept", "application/json")
             .build()
 
@@ -42,7 +43,13 @@ class OpenRouterModelFetcher(
 
     private fun WireModel.toChatModel(): ChatModel? {
         val modelId = id.takeIf { it.isNotBlank() } ?: return null
-        val free = pricing?.prompt?.let { it == "0" || it == "0.0" } ?: false
+        val free =
+                pricing?.let { p ->
+                    val promptFree = p.prompt == "0" || p.prompt == "0.0"
+                    val completionFree = p.completion == "0" || p.completion == "0.0"
+                    promptFree && completionFree
+                }
+                        ?: false
         val reasoning = supportedParameters.any { it == "reasoning" || it == "thinking" }
         return ChatModel(
             id = modelId,
@@ -76,7 +83,10 @@ class OpenRouterModelFetcher(
     )
 
     @Serializable
-    private data class WirePricing(val prompt: String? = null)
+    private data class WirePricing(
+        val prompt: String? = null,
+        val completion: String? = null
+    )
 
     private companion object {
         const val PROVIDER_ID = "openrouter"

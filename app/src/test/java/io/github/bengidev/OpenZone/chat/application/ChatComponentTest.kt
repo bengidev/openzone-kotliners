@@ -172,18 +172,35 @@ class ChatComponentTest {
     }
 
     @Test
-    fun `send is blocked when credential gate is closed`() = runTest {
+    fun `whitespace-only reasoning deltas do not create thinking row`() = runTest {
         val scope = CoroutineScope(UnconfinedTestDispatcher(testScheduler))
         val component = component(
-            events = listOf(ChatStreamingEvent.TextDelta("x"), ChatStreamingEvent.Done),
-            scope = scope,
-            canStartSend = false
+            events = listOf(
+                ChatStreamingEvent.ThinkingDelta("   "),
+                ChatStreamingEvent.TextDelta("Answer"),
+                ChatStreamingEvent.Done
+            ),
+            scope = scope
         )
 
-        component.onDraftChanged("Hi")
+        component.onDraftChanged("Question")
         component.onSendTapped()
 
-        assertTrue(component.state.value.messages.isEmpty())
-        assertNull(component.state.value.messages.firstOrNull())
+        assertTrue(component.state.value.messages.thinkingRows().isEmpty())
+        assertEquals("Answer", component.state.value.messages.assistantText())
+    }
+
+    @Test
+    fun `loading indicator shows before first assistant delta`() = runTest {
+        val scope = CoroutineScope(UnconfinedTestDispatcher(testScheduler))
+        val component = component(
+            events = emptyList(),
+            scope = scope
+        )
+
+        component.onDraftChanged("Question")
+        component.onSendTapped()
+
+        assertTrue(component.state.value.showLoadingIndicator)
     }
 }
